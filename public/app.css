@@ -496,3 +496,5 @@ button.danger { background:var(--danger, #ef4444); border-color:transparent; col
 .set-server .dot { width:9px; height:9px; border-radius:50%; background:var(--ok); flex:none }
 @media (max-width:767px) { .set-server { flex-wrap:wrap } .set-server .who { flex:1 1 60% } }
 .local-note > summary { cursor:pointer; font-size:13px }
+
+.dlg:focus { outline:none }
