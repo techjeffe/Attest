@@ -84,6 +84,11 @@ struct WebView: PlatformViewRepresentable {
         }
 
         #if os(iOS)
+        /// 100 at the default size; larger or smaller with the system text size, within 90...150 percent.
+        static func textScale() -> CGFloat { min(1.5, max(0.9, UIFontMetrics.default.scaledValue(for: 1))) }
+        static func textSizeScript() -> String {
+            "document.documentElement.style.webkitTextSizeAdjust = '\(Int((textScale() * 100).rounded()))%';"
+        }
         /// Pull-to-refresh: ask the page to refresh its own screen, falling back to a full reload when it is not running.
         @objc func pulled(_ r: UIRefreshControl) {
             guard let w = loader.webView else { r.endRefreshing(); return }
@@ -109,6 +114,9 @@ struct WebView: PlatformViewRepresentable {
         cfg.mediaTypesRequiringUserActionForPlayback = []
         cfg.userContentController.add(c, name: "attest")
         // What the page needs to know about the app it is running in (Settings shows the lock switch from this).
+        #if os(iOS)
+        cfg.userContentController.addUserScript(WKUserScript(source: Coordinator.textSizeScript(), injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        #endif
         cfg.userContentController.addUserScript(WKUserScript(source: "window.attestNative = { lock: \(lockEnabled) };", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let v = WKWebView(frame: .zero, configuration: cfg)
         #if os(iOS)
@@ -121,6 +129,14 @@ struct WebView: PlatformViewRepresentable {
         v.uiDelegate = c
         v.navigationDelegate = c
         v.allowsBackForwardNavigationGestures = true
+        #if os(iOS)
+        // Dynamic Type: the page is sized in px, so scale its text by the system text size (Settings > Display &
+        // Brightness > Text Size, or Accessibility > Larger Text) with text-size-adjust, which reflows within the
+        // screen width. (pageZoom does not: it pushes the page off the right edge.)
+        NotificationCenter.default.addObserver(forName: UIContentSizeCategory.didChangeNotification, object: nil, queue: .main) { [weak v] _ in
+            v?.evaluateJavaScript(Coordinator.textSizeScript())
+        }
+        #endif
         loader.webView = v
         loader.reloadURL = url
         v.load(URLRequest(url: url))
