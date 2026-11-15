@@ -6,6 +6,7 @@ import { $ } from './dom.js';
 import { icon } from './icons.js';
 import { showToday } from './today.js';
 import { showAsk } from './chats.js';
+import { haptic } from './haptic.js';
 
 const bar = () => $('tabbar');
 
@@ -24,11 +25,13 @@ export function wireTabbar() {
     recordings: () => setTab('recordings'),
     settings: () => $('settings').click(),
     // Recording happens from the Recordings pane (the timer and live transcript live there).
-    record: () => { setTab('recordings'); $('rec').click(); },
+    record: () => { setTab('record'); $('rec').click(); },
   };
-  b.onclick = (e) => { const t = e.target.closest('button[data-tab]'); if (t) go[t.dataset.tab]?.(); };
+  b.onclick = (e) => { const t = e.target.closest('button[data-tab]'); if (t) { if (t.dataset.tab !== 'record') haptic('selection'); go[t.dataset.tab]?.(); } };
   // Opening a recording from the list shows it full-screen.
   $('list').addEventListener('click', (e) => { if (e.target.closest('.card')) setTab('detail'); }, true);
+  // A recording that just finished (or an upload) opens full-screen, whichever pane started it.
+  document.addEventListener('attest:show-detail', () => setTab('detail'));
   // Mirror the Today badge, and the red state while recording.
   new MutationObserver(() => { $('tab-badge').textContent = $('badge').textContent; })
     .observe($('badge'), { childList: true, characterData: true, subtree: true });

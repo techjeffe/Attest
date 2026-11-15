@@ -15,6 +15,8 @@ import { api } from './api.js';
 import { state } from './state.js';
 import { refresh } from './lists.js';
 import { open } from './recordings.js';
+import { haptic } from './haptic.js';
+import { toast } from './toast.js';
 
 const SLICE_MS = 5000;
 // Stop 2MB short of the server's upload cap (24MB, or 48MB on OpenRouter; from /api/meta).
@@ -49,8 +51,27 @@ function startLevel(stream, btn, rec) {
   } catch { /* cosmetic only */ }
 }
 
+// The result opens full-screen (the phone layout listens for this), with a haptic and a short note.
+function saved() {
+  document.dispatchEvent(new CustomEvent('attest:show-detail'));
+  haptic('success');
+  toast('Saved. Attest is working on it.');
+}
+
+// Keep the screen on while recording, so the phone does not lock mid-conversation. Not every browser or web
+// view supports it; where it does not, nothing happens.
+let wake = null;
+async function keepAwake(on) {
+  try {
+    if (on) wake = await navigator.wakeLock?.request('screen');
+    else { await wake?.release(); wake = null; }
+  } catch { /* unsupported or refused */ }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && state.recorder) keepAwake(true); });
+
 export async function startStop() {
   if (state.recorder) {
+    haptic('medium');
     state.recorder.stop();
     return;
   }
@@ -112,6 +133,8 @@ export async function startStop() {
   btn.disabled = false;
   btn.classList.add('on');
   btn.textContent = '■ Stop';
+  haptic('heavy');
+  keepAwake(true);
   startLevel(stream, btn, rec);
   state.tick = setInterval(() => {
     const s = Math.floor((Date.now() - rec.startedAt) / 1000);
@@ -167,6 +190,7 @@ async function finish(rec) {
   state.recorder = null;
   rec.previewOn = false;
   clearInterval(state.tick);
+  keepAwake(false);
   rec.stream.getTracks().forEach((t) => t.stop());
   const ms = Date.now() - rec.startedAt;
   $('rec').classList.remove('on');
@@ -203,6 +227,7 @@ async function finishRecording(rec, blob, durationMs) {
     state.current = rec.id;
     await refresh();
     await open(rec.id);
+    saved();
   } catch (e) {
     alert(`${e.message}. The audio is saved on the server; open the recording and use "Recover audio".`);
     refresh();
@@ -224,6 +249,7 @@ export async function submit(blob, durationMs) {
     state.current = id;
     await refresh();
     await open(id);
+    saved();
   } catch (e) {
     alert(e.message);
   }

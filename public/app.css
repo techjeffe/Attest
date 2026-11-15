@@ -74,12 +74,12 @@ aside select, aside input:not([type=checkbox]) { width:100% }
 
 /* ---------- eyebrows, headings ---------- */
 h2 { font-size:22px; line-height:1.3; margin:0 0 6px; font-weight:650; letter-spacing:-.01em }
-h3, .eyebrow { font-size:11px; line-height:1.4; font-weight:650; letter-spacing:.12em; text-transform:uppercase; color:var(--text-muted); margin:32px 0 12px }
+h3, .eyebrow { font-size:12px; line-height:1.4; font-weight:650; letter-spacing:.12em; text-transform:uppercase; color:var(--text-muted); margin:32px 0 12px }
 .eyebrow { margin:0 }
 .empty { color:var(--text-secondary); padding:56px 0; text-align:center }
 
 /* ---------- pills, chips ---------- */
-.pill { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:500; line-height:1.6; padding:0 8px; border-radius:999px; border:1px solid var(--border-subtle); color:var(--text-secondary); background:rgba(255,255,255,.03); white-space:nowrap }
+.pill { display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:500; line-height:1.6; padding:0 8px; border-radius:999px; border:1px solid var(--border-subtle); color:var(--text-secondary); background:rgba(255,255,255,.03); white-space:nowrap }
 .pill.ready { color:var(--ok-ink); background:var(--ok-soft); border-color:transparent }
 .pill.error { color:var(--bad); background:var(--bad-soft); border-color:transparent }
 .pill.processing, .pill.transcribed, .pill.uploaded, .pill.recording { color:var(--warn); background:var(--warn-soft); border-color:transparent }
@@ -109,7 +109,7 @@ h3, .eyebrow { font-size:11px; line-height:1.4; font-weight:650; letter-spacing:
 .scope { width:auto; padding:5px 26px 5px 10px; border-radius:999px; font-size:13px }
 .persona { gap:8px; padding:4px 10px 4px 4px; border-radius:999px; font-size:13px }
 .persona .who { display:flex; flex-direction:column; line-height:1.15; text-align:left }
-.persona .who small { font-size:10px; color:var(--text-muted); letter-spacing:.03em }
+.persona .who small { font-size:12px; color:var(--text-muted); letter-spacing:.03em }
 .popover { position:fixed; right:calc(16px + var(--safe-r)); top:calc(var(--header-h) + var(--safe-t) + 6px); width:300px; max-height:70vh; overflow-y:auto; background:var(--bg-glass); -webkit-backdrop-filter:var(--blur); backdrop-filter:var(--blur); border:1px solid var(--border-strong); border-radius:var(--r); box-shadow:var(--shadow); padding:8px; z-index:30 }
 .popover[hidden] { display:none }
 .popover .opt { display:flex; align-items:center; gap:10px; width:100%; padding:8px 10px; border-radius:8px; border:0; background:transparent; justify-content:flex-start; text-align:left }
@@ -137,7 +137,7 @@ button.rec.on::before { content:""; position:absolute; inset:-4px; border-radius
 .opts > summary::-webkit-details-marker { display:none }
 .opts[open] > summary .ic { transform:rotate(180deg) }
 .opts .opts-body { padding:0 12px 12px } .opts .opts-pills { display:flex; gap:6px; flex-wrap:wrap }
-.group-title { font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--text-muted); margin:20px 4px 8px }
+.group-title { font-size:12px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--text-muted); margin:20px 4px 8px }
 .card { border:1px solid transparent; border-radius:10px; padding:9px 10px; margin-bottom:2px; cursor:pointer }
 .card:hover { background:var(--bg-surface) }
 .card.active { background:var(--bg-elevated); border-color:var(--border-subtle) }
@@ -180,6 +180,7 @@ main .banner { margin:12px 0 }
 .omnibar input { flex:1; background:transparent; border:0; padding:6px 0; font-size:15px; box-shadow:none }
 .omnibar input:hover { border:0 } .omnibar input:focus-visible { outline:none }
 .omnibar kbd { margin-right:2px }
+@media (hover:none) { .cmdbtn kbd, .omnibar kbd { display:none } } /* no keyboard shortcut to advertise on a touch screen */
 
 /* ---------- tasks (action items, facts, people, chats) ---------- */
 .task { display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--border-subtle) }
@@ -196,7 +197,7 @@ main .banner { margin:12px 0 }
 .task input[type=checkbox]:checked::after { content:""; width:5px; height:9px; border:solid #052e1b; border-width:0 2px 2px 0; transform:rotate(45deg) translate(-1px,-1px) }
 .task.done .body { color:var(--text-muted); text-decoration:line-through; text-decoration-color:rgba(161,161,170,.55) }
 .task.done .meta { opacity:.8 }
-.tag { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:500; padding:0 8px; border-radius:6px; line-height:1.7; background:var(--bg-elevated); color:var(--text-secondary) }
+.tag { display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:500; padding:0 8px; border-radius:6px; line-height:1.7; background:var(--bg-elevated); color:var(--text-secondary) }
 .tag.who { background:var(--accent-soft); color:var(--accent-ink) }
 .tag.due { background:var(--bg-elevated) } .tag.late { background:var(--bad-soft); color:var(--bad) }
 .tag.age { background:var(--warn-soft); color:var(--warn) }
@@ -272,7 +273,7 @@ div.markmap .markmap-foreign code { background:var(--bg-canvas) }
 .bubble { max-width:78%; padding:10px 14px; border-radius:16px; margin:8px 0 }
 .bubble.user { margin-left:auto; background:var(--accent); color:#fff }
 .bubble.assistant { margin-right:auto; background:var(--bg-surface); border:1px solid var(--border-subtle) }
-.bubble .src { margin-top:6px } .bubble .src a { font-size:11px; color:var(--text-secondary); margin-right:10px; text-decoration:underline; cursor:pointer }
+.bubble .src { margin-top:6px } .bubble .src a { font-size:12px; color:var(--text-secondary); margin-right:10px; text-decoration:underline; cursor:pointer }
 .bubble.user .src a { color:#e0e7ff }
 #chat-messages { display:flex; flex-direction:column }
 
@@ -294,7 +295,7 @@ dialog textarea, dialog input:not([type=checkbox]), dialog select { width:100% }
 .pal-top input:focus-visible { outline:none }
 .pal-chips { display:flex; gap:8px; align-items:center; padding:8px 16px; border-bottom:1px solid var(--border-subtle) }
 .pal-list { max-height:min(52vh,420px); overflow-y:auto; padding:8px }
-.pal-group { font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--text-muted); padding:10px 10px 4px }
+.pal-group { font-size:12px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--text-muted); padding:10px 10px 4px }
 .pal-item { display:flex; align-items:center; gap:12px; width:100%; padding:9px 10px; border-radius:9px; border:0; background:transparent; text-align:left; justify-content:flex-start; font-size:14px }
 .pal-item .ic { color:var(--text-muted) }
 .pal-item .sub { margin-left:auto; font-size:12px; color:var(--text-muted) }
@@ -308,7 +309,12 @@ dialog textarea, dialog input:not([type=checkbox]), dialog select { width:100% }
   main { padding:16px calc(16px + var(--safe-r)) 48px calc(16px + var(--safe-l)); overflow:visible } body > header { padding:var(--safe-t) calc(10px + var(--safe-r)) 0 calc(12px + var(--safe-l)) }
   .side-toggle { display:none } body.side-collapsed .wrap { grid-template-columns:minmax(0,1fr) } body.side-collapsed aside { visibility:visible }
   .tx-row { grid-template-columns:1fr; gap:6px } .bubble { max-width:92% } .talk-row { grid-template-columns:1fr }
-  .cmdbtn { min-width:0 } .scope { max-width:110px } .persona .who { display:none }
+  /* Header on a phone: logo, a search icon, and your avatar. The area filter becomes its own row under it (scope.js moves it). */
+  .cmdbtn { min-width:0; width:40px; height:40px; padding:0; justify-content:center; border-radius:999px; margin-left:auto } .cmd-label, .cmdbtn kbd { display:none }
+  .persona .who, .persona > svg { display:none } .persona { padding:2px; min-width:40px; min-height:40px; justify-content:center }
+  .scope-bar:not([hidden]) { display:flex; padding:8px calc(12px + var(--safe-r)) 0 calc(12px + var(--safe-l)) }
+  .scope-bar .scope { flex:1; max-width:none; min-height:40px; font-size:14px }
+  body[data-tab="detail"] .scope-bar { display:none }
   /* People rows and merge suggestions: name on its own line, actions underneath (a single flex line squeezed the name to one letter per line). */
   #people-list .task { flex-wrap:wrap }
   #people-list .task .body { flex:1 1 100% }
@@ -320,7 +326,7 @@ dialog textarea, dialog input:not([type=checkbox]), dialog select { width:100% }
 @media (max-width:767px) {
   .tabbar { display:flex; position:fixed; left:0; right:0; bottom:0; z-index:30; height:calc(58px + var(--safe-b)); padding:0 calc(4px + var(--safe-r)) var(--safe-b) calc(4px + var(--safe-l));
     background:var(--bg-glass); border-top:1px solid var(--border-subtle); -webkit-backdrop-filter:var(--blur); backdrop-filter:var(--blur) }
-  .tabbar button { flex:1; min-width:0; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:4px 0; font-size:10.5px; font-weight:600;
+  .tabbar button { flex:1; min-width:0; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:4px 0; font-size:11px; font-weight:600;
     background:transparent; border:0; border-radius:0; color:var(--text-muted) }
   .tabbar button.active { color:var(--accent-ink, var(--text-primary)) }
   .tabbar .tab-rec .tab-ic { background:var(--accent-grad); color:#fff; border-radius:50%; width:44px; height:44px; display:flex; align-items:center; justify-content:center; margin-top:-20px; border:3px solid var(--bg-canvas); box-shadow:var(--accent-glow) }
@@ -329,12 +335,14 @@ dialog textarea, dialog input:not([type=checkbox]), dialog select { width:100% }
   body { padding-bottom:calc(64px + var(--safe-b)) }
   /* The tabs replace the top buttons and the sidebar's own nav, and decide which pane shows. */
   .aside-nav, #export-all, #export-zip, header #settings { display:none }
-  body[data-tab="recordings"] main, body:not([data-tab="recordings"]) aside { display:none }
+  body[data-tab="recordings"] main, body[data-tab="record"] main, body:not([data-tab="recordings"]):not([data-tab="record"]) aside { display:none }
 }
+/* Reduce Motion (iOS Settings > Accessibility, or the OS equivalent): no animation or smooth scrolling anywhere. */
+@media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important } }
 @media (prefers-reduced-motion:reduce) { button.rec.on, button.rec.on::before, .tabbar .tab-rec.on .tab-ic, dialog, .popover { animation:none !important; transition:none !important } }
 
 .md li:has(> .ack) { list-style:none; margin-left:-1.2em }
-button.ack { padding:0 6px; margin-right:8px; font-size:11px; line-height:1.6; border-radius:6px; color:var(--text-muted); background:transparent }
+button.ack { padding:0 6px; margin-right:8px; font-size:12px; line-height:1.6; border-radius:6px; color:var(--text-muted); background:transparent }
 button.ack:hover { color:var(--ok); border-color:var(--ok) }
 .ack-note { margin-top:10px; font-size:12px }
 
@@ -416,6 +424,75 @@ dialog[open] { animation:pop-in .16s ease-out }
 .stat b { font-size:13.5px }
 .stat.bad { border-color:var(--bad); color:var(--bad) } .stat.warn { border-color:#d97706; color:#d97706 }
 .reminders .bucket { margin-top:14px } .reminders .bucket:first-child { margin-top:8px }
-.bucket-h { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); margin:0 0 4px; font-weight:600 }
+.bucket-h { font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); margin:0 0 4px; font-weight:600 }
 .bucket-overdue .bucket-h { color:var(--bad) } .bucket-today .bucket-h { color:#d97706 }
 .today-main .omnibar { margin-top:22px }
+
+/* ---------- confirmation sheet (app/confirm.js) ---------- */
+.confirm-sheet { width:min(420px, 92vw) }
+.cs-body { padding:20px 20px 16px }
+.cs-body h2 { margin:0 0 6px; font-size:17px; line-height:1.3 }
+.cs-body p { margin:0 0 16px; color:var(--text-secondary); font-size:14px; line-height:1.5; white-space:pre-line }
+.cs-actions { display:flex; flex-direction:column; gap:8px }
+.cs-actions button { min-height:44px; font-size:16px }
+button.danger { background:var(--danger, #ef4444); border-color:transparent; color:#fff; font-weight:600 }
+@media (min-width:768px) { .cs-actions { flex-direction:row-reverse } .cs-actions button { flex:1 } }
+
+/* ---------- toast (app/toast.js) ---------- */
+.toast { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(24px + var(--safe-b)); z-index:60; display:flex; align-items:center; gap:14px; max-width:min(92vw, 460px); padding:10px 12px 10px 16px; background:var(--bg-elevated); border:1px solid var(--border-strong); border-radius:12px; box-shadow:var(--shadow); font-size:14px; animation:pop-in .16s ease-out }
+.toast button { min-height:32px; flex:none }
+@media (max-width:767px) { .toast { bottom:calc(72px + var(--safe-b)) } }
+
+/* ---------- Today on a phone: what needs you comes right after the brief ---------- */
+.skel { display:flex; flex-direction:column; gap:10px; padding:4px 0 }
+.skel i { display:block; height:12px; border-radius:6px; background:linear-gradient(90deg, var(--bg-elevated) 25%, var(--border-subtle) 50%, var(--bg-elevated) 75%); background-size:200% 100%; animation:shimmer 1.4s linear infinite }
+.skel i:nth-child(2) { width:92% } .skel i:nth-child(3) { width:76% } .skel i:nth-child(4) { width:55% }
+@keyframes shimmer { from { background-position:200% 0 } to { background-position:-200% 0 } }
+@media (max-width:767px) {
+  .today-grid { display:flex; flex-direction:column; align-items:stretch; gap:20px }
+  .today-main { display:contents }
+  .t-brief { order:1 } .today-side { order:2 } .t-ask { order:3 }
+  .brief-hero { padding:16px }
+  .task { min-height:44px; align-items:center }
+  .task input[type=checkbox] { width:24px; height:24px; margin:0 }
+}
+
+/* ---------- Library: failed cards and the action menu (app/library.js) ---------- */
+.card { touch-action:pan-y; -webkit-touch-callout:none; user-select:none; -webkit-user-select:none; transition:transform .15s ease, background .15s ease }
+.rerr { display:flex; align-items:center; gap:8px; margin-top:6px; font-size:12px; color:var(--text-secondary) }
+.rerr span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.rerr button { flex:none; min-height:28px }
+.popover .opt.danger-opt { color:#f87171 }
+.popover a.opt { display:flex; align-items:center; text-decoration:none; color:inherit }
+@media (max-width:767px) { .rerr button { min-height:36px } }
+
+/* ---------- Record pane on a phone: one big button, a big timer, the live transcript ---------- */
+@media (max-width:767px) {
+  body[data-tab="recordings"] .rec-block, body[data-tab="recordings"] details.opts, body[data-tab="recordings"] #transcriber-note { display:none }
+  body[data-tab="record"] aside { border:0 }
+  body[data-tab="record"] aside .group-title, body[data-tab="record"] #list, body[data-tab="record"] aside .aside-nav { display:none }
+  body[data-tab="record"] .rec-block { align-items:center; gap:14px; margin-top:6vh }
+  body[data-tab="record"] button.rec { width:148px; height:148px; border-radius:50%; font-size:17px; padding:0 }
+  body[data-tab="record"] button.rec.on::before { border-radius:50% }
+  body[data-tab="record"] #timer { font-size:44px; font-weight:600; font-variant-numeric:tabular-nums; color:var(--text-primary) }
+  body[data-tab="record"] #live { width:100%; max-height:32vh; overflow-y:auto; text-align:left; font-size:14px }
+  body[data-tab="record"] #mic-block { display:contents }
+  body[data-tab="record"] button.rec { order:0 } body[data-tab="record"] #timer { order:1 } body[data-tab="record"] #live { order:2 }
+  body[data-tab="record"] #mic-block .rec-sub { order:3 } body[data-tab="record"] #import-row { order:4 } body[data-tab="record"] #pocket-status, body[data-tab="record"] #source-hint { order:5 }
+  body[data-tab="record"] .rec-sub, body[data-tab="record"] #import-row { width:100% }
+  body[data-tab="record"] .rec-sub > *, body[data-tab="record"] #import-row > * { min-height:44px }
+}
+
+/* ---------- Settings: folding groups, the server row, the local-mode note ---------- */
+.set-sec { margin-top:8px; border:1px solid var(--border-subtle); border-radius:12px; background:rgba(24,24,27,.4) }
+.set-sec > summary { display:flex; align-items:baseline; gap:10px; padding:12px 14px; font-weight:600; font-size:14px; cursor:pointer; list-style:none; min-height:44px; box-sizing:border-box }
+.set-sec > summary::-webkit-details-marker { display:none }
+.set-sec > summary::after { content:"›"; margin-left:auto; transition:transform .15s; color:var(--text-muted); font-size:18px }
+.set-sec[open] > summary::after { transform:rotate(90deg) }
+.set-sec > summary .muted { font-weight:400; font-size:12px }
+.set-sec-body { padding:0 14px 14px } .set-sec-body > * + * { margin-top:8px }
+.set-server { display:flex; align-items:center; gap:10px; padding:10px 14px; border:1px solid var(--border-subtle); border-radius:12px; background:rgba(24,24,27,.4) }
+.set-server .who { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis }
+.set-server .dot { width:9px; height:9px; border-radius:50%; background:var(--ok); flex:none }
+@media (max-width:767px) { .set-server { flex-wrap:wrap } .set-server .who { flex:1 1 60% } }
+.local-note > summary { cursor:pointer; font-size:13px }

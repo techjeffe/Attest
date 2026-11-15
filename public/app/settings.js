@@ -3,6 +3,7 @@
 // the server only says whether one is set.
 
 import { renderSources } from './sources.js';
+import { confirmSheet } from './confirm.js';
 import { $, esc } from './dom.js';
 import { api } from './api.js';
 import { state } from './state.js';
@@ -71,8 +72,7 @@ export function sourcesHtml(s = {}) {
       <div class="muted" style="margin-top:4px">${help}</div>
       ${has ? `<label class="opt"><input type="checkbox" id="set-${id}-clear"><span>Remove the saved ${name} key</span></label>` : ''}
     </div>`;
-  return `<h3>Where your recordings come from</h3>
-    <div class="muted" style="margin-bottom:6px">Tick every device you use. The main screen shows only these, and the background sync follows them.</div>
+  const inner = `<div class="muted" style="margin-bottom:6px">Tick every device you use. The main screen shows only these, and the background sync follows them.</div>
     ${SOURCE_CHOICES.map((c) => `
       <label class="opt"><input type="checkbox" class="set-src" value="${c.id}"${on.includes(c.id) ? ' checked' : ''}>
         <span><b>${esc(c.label)}</b><br><span class="muted">${esc(c.note)}</span></span></label>
@@ -81,6 +81,7 @@ export function sourcesHtml(s = {}) {
       ${c.id === 'pendant' && nativeBridge() ? '<div class="src-key" data-src="pendant"' + (on.includes('pendant') ? '' : ' hidden') + '><button type="button" class="small" id="open-pendant">Open pendant sync</button></div>' : ''}
       ${c.id === 'omi' ? keyField('omi', 'Omi', s.has_omi_key, 'Paste your Omi Developer API key',
         'Create a key in the Omi app under Settings, Developer Settings, with only the <code>conversations:read</code> scope. Stored in your database and never shown again.') : ''}`).join('')}`;
+  return section('Devices', inner, true, 'where your recordings come from');
 }
 
 // Show a source's key field only while its box is ticked.
@@ -107,17 +108,39 @@ const LANGS = [['', 'Auto-detect'], ['en', 'English'], ['es', 'Spanish'], ['fr',
 
 // Voice recognition and the sources: the settings that apply however Attest is run.
 export function extrasHtml(s = {}) {
-  return `<h3>Voice recognition</h3>
-    <label class="opt"><input type="checkbox" id="set-voice"${s.voice_match !== false ? ' checked' : ''}>
-      <span>Recognise enrolled voices <span class="muted">(downloads a 49MB voice model once; runs in your browser, works with any provider)</span></span></label>
-    <h3>Transcription</h3>
-    <label class="muted" style="display:block">Expected language
+  return `${section('Voice recognition', `<label class="opt"><input type="checkbox" id="set-voice"${s.voice_match !== false ? ' checked' : ''}>
+      <span>Recognise enrolled voices <span class="muted">(downloads a 49MB voice model once; runs in your browser, works with any provider)</span></span></label>`)}
+    ${section('Transcription', `<label class="muted" style="display:block">Expected language
       <select id="set-lang" style="width:100%">${LANGS.map(([c, n]) => `<option value="${c}"${(s.stt_language || '') === c ? ' selected' : ''}>${n}</option>`).join('')}</select></label>
     <div class="muted" style="margin:4px 0 8px">Pins the language so the speech model cannot guess wrong and loop. Applies to models that accept it (Whisper).</div>
     <label class="opt"><input type="checkbox" id="set-guard"${s.hallucination_guard !== false ? ' checked' : ''}>
-      <span>Hallucination guard <span class="muted">(removes phrases repeated over silence, and with English expected, stray Russian/Japanese/other scripts. Hand-started recordings like Pocket always have noise at the ends. Turn off if it ever removes real speech.)</span></span></label>
+      <span>Hallucination guard <span class="muted">(removes phrases repeated over silence, and with English expected, stray Russian/Japanese/other scripts. Hand-started recordings like Pocket always have noise at the ends. Turn off if it ever removes real speech.)</span></span></label>`)}
     ${sourcesHtml(s)}`;
 }
+
+// Where this window is connected, and a way to change it, inside the iPhone/Mac app. The page cannot do either
+// itself, so the buttons ask the native shell (WebView.swift). A plain browser has no such shell: nothing shows.
+function serverRowHtml() {
+  if (!nativeBridge()) return '';
+  return `<div class="set-server"><span class="dot" aria-hidden="true"></span>
+    <div class="who"><b>${esc(location.host)}</b><div class="muted">Connected</div></div>
+    <button type="button" class="small" id="srv-pendant">Pendant sync</button>
+    <button type="button" class="small" id="srv-change">Change server</button></div>
+    ${window.attestNative ? `<label class="opt set-lock"><input type="checkbox" id="srv-lock"${window.attestNative.lock ? ' checked' : ''}>
+      <span>Lock Attest <span class="muted">(ask for Face ID, Touch ID or your passcode when it opens)</span></span></label>` : ''}`;
+}
+function wireServerRow() {
+  $('srv-pendant')?.addEventListener('click', () => nativeBridge()?.postMessage({ action: 'pendant' }));
+  $('srv-change')?.addEventListener('click', () => nativeBridge()?.postMessage({ action: 'server' }));
+  // The app answers by setting window.attestNative.lock and this box to what actually happened (it refuses when
+  // the device has no passcode, or the person cancels the check).
+  $('srv-lock')?.addEventListener('change', (e) => nativeBridge()?.postMessage({ action: 'lock', on: e.target.checked }));
+}
+
+// A settings group that folds: the page is long, and most of it is set once. Closed groups stay in the DOM, so
+// Save still reads every field.
+export const section = (title, body, open = false, note = '') =>
+  `<details class="set-sec"${open ? ' open' : ''}><summary><span>${title}</span>${note ? `<span class="muted">${note}</span>` : ''}</summary><div class="set-sec-body">${body}</div></details>`;
 
 function render() {
   const p = $('set-provider').value;
@@ -127,17 +150,16 @@ function render() {
     ? (p === S.provider && S.stt_models.length ? S.stt_models : cat.stt.slice(0, 1).map((o) => o.id)) : [];
   const def = chatPicked.includes(S.default_model) && p === S.provider ? S.default_model : chatPicked[0];
 
-  $('set-body').innerHTML = `
-    <h3>Chat models <span class="muted" style="text-transform:none;letter-spacing:0">(summaries, mind maps, ask)</span></h3>
-    ${modelList('set-chat', cat.chat, chatPicked)}
-    <label class="muted" style="display:block;margin-top:8px">Default model
-      <select id="set-default" style="width:100%"></select></label>
-    ${p === 'openrouter' ? `<h3>Transcription models</h3>${modelList('set-stt', cat.stt, sttPicked)}
-      <div class="muted" style="margin-top:6px">Models marked LABELS SPEAKERS (MAI-Transcribe 2, Voxtral, Scribe) give you speaker names in transcripts. Whisper gives plain text. </div>` : ''}
+  $('set-body').innerHTML = `${serverRowHtml()}
+    ${section('Models', `${modelList('set-chat', cat.chat, chatPicked)}
+      <label class="muted" style="display:block;margin-top:8px">Default model
+        <select id="set-default" style="width:100%"></select></label>`, true, 'summaries, mind maps, ask')}
+    ${p === 'openrouter' ? section('Transcription models', `${modelList('set-stt', cat.stt, sttPicked)}
+      <div class="muted" style="margin-top:6px">Models marked LABELS SPEAKERS (MAI-Transcribe 2, Voxtral, Scribe) give you speaker names in transcripts. Whisper gives plain text. </div>`) : ''}
     ${extrasHtml(S)}
-    <h3>${p === 'openrouter' ? 'OpenRouter' : 'OpenAI'} API key</h3>
-    <input id="set-key" type="password" autocomplete="off" placeholder="${(p === S.provider ? S.has_key : false) ? 'A key is saved. Leave blank to keep it.' : 'Paste your key'}">
-    <div class="muted" style="margin-top:4px">Stored in your Worker's database and never shown again.</div>`;
+    ${section(`${p === 'openrouter' ? 'OpenRouter' : 'OpenAI'} API key`, `<input id="set-key" type="password" autocomplete="off" placeholder="${(p === S.provider ? S.has_key : false) ? 'A key is saved. Leave blank to keep it.' : 'Paste your key'}">
+      <div class="muted" style="margin-top:4px">Stored in your Worker's database and never shown again.</div>`)}`;
+  wireServerRow();
 
   const syncDefault = () => {
     const ids = [...new Set([...checked('.set-chat'), $('set-chat-extra').value.trim()].filter(Boolean))];
@@ -181,8 +203,9 @@ async function save() {
 // knows OpenAI and OpenRouter, so saving it would overwrite them. Explain that instead, and
 // offer the two settings that still apply: voice recognition and the Pocket key.
 export function localSettingsHtml(meta, s = {}) {
-  return `<div class="banner">Attest is running <b>locally</b>, so its models are set in <code>.dev.vars</code>, not here.
-    Run <code>npm run setup:local</code> to change them, and <code>npm run local:check</code> to test them.</div>
+  return `<details class="banner local-note"><summary>Running locally: models are set in <code>.dev.vars</code></summary>
+    <div style="margin-top:6px">Attest is running <b>locally</b>, so its models are set in <code>.dev.vars</code>, not here.
+    Run <code>npm run setup:local</code> to change them, and <code>npm run local:check</code> to test them.</div></details>
     <div class="muted" style="margin-top:10px"><b>Search:</b> ${meta?.vectors_enabled ? 'by meaning (local embeddings)' : 'by keywords (add an embedding model to .dev.vars for semantic search)'}<br>
     <b>Speakers:</b> ${meta?.diarize_local ? 'detected in your browser by clustering voices' : 'from the transcriber, if it labels speakers'}</div>
     ${extrasHtml(s)}`;
@@ -191,7 +214,8 @@ export function localSettingsHtml(meta, s = {}) {
 async function renderLocal() {
   const got = await api('/settings');
   S = got;
-  $('set-body').innerHTML = localSettingsHtml(state.META, got);
+  $('set-body').innerHTML = serverRowHtml() + localSettingsHtml(state.META, got);
+  wireServerRow();
   wireSources();
 }
 
@@ -215,9 +239,20 @@ async function saveLocal() {
 }
 
 export function wireSettings() {
+  // Closing with unsaved edits asks first (Close button or Escape), so a stray tap cannot throw them away.
+  const dlg = $('settings-dialog');
+  let dirty = false;
+  dlg.addEventListener('input', () => { dirty = true; });
+  dlg.addEventListener('change', () => { dirty = true; });
+  const tryClose = async () => {
+    if (dirty && !(await confirmSheet({ title: 'Discard changes?', message: 'Your settings have not been saved.', confirmLabel: 'Discard', destructive: true }))) return;
+    dirty = false; dlg.close();
+  };
+  dlg.addEventListener('cancel', (e) => { if (dirty) { e.preventDefault(); tryClose(); } });
   // Open first, load second: whatever goes wrong shows up inside the dialog instead of
   // the click appearing to do nothing.
   $('settings').onclick = async () => {
+    dirty = false;
     $('set-body').innerHTML = '';
     $('set-custom').textContent = '';
     $('set-status').textContent = 'Loading…';
@@ -245,5 +280,7 @@ export function wireSettings() {
   };
   $('set-provider').onchange = () => { try { render(); } catch (e) { $('set-status').textContent = e.message; } };
   $('set-save').onclick = () => (state.META?.local_mode ? saveLocal() : save());
-  $('set-close').onclick = () => $('settings-dialog').close();
+  $('set-close').onclick = tryClose;
+  // Saved: nothing left to lose.
+  $('set-save').addEventListener('click', () => setTimeout(() => { dirty = false; }, 0));
 }

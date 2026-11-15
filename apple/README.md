@@ -3,7 +3,7 @@
 Three things live here:
 
 - **`PendantKit`** (`Sources/PendantKit`): talks to a Limitless pendant over Bluetooth, copies its audio to disk, cuts it into recordings, and uploads them to your Attest. The Bluetooth protocol is Omi's (MIT), see `NOTICE`.
-- **The Attest app** (`App/`, iOS and macOS): your Attest web app in a native shell (so you get the phone layout and its bottom bar: Home, Ask, Record, Recordings, Settings), plus a native **pendant panel** with a **Sync now** button. Open the panel from **Settings > Open pendant sync** inside the app. A small status pill also appears at the bottom right, above the tab bar, only when there is something to report: recordings waiting, a sync running, or an error.
+- **The Attest app** (`App/`, iOS and macOS): your Attest web app in a native shell (so you get the phone layout and its bottom bar: Home, Ask, Record, Library, Settings), plus a native **pendant panel** with a **Sync now** button. Open the panel from **Settings > Open pendant sync** inside the app. A small status pill also appears at the bottom right, above the tab bar, only when there is something to report: recordings waiting, a sync running, or an error.
 - **`attest-pendant`**: the same sync as a command-line tool for the Mac.
 
 ```
@@ -13,8 +13,8 @@ apple/
   icons.sh             renders App/Shared/Assets.xcassets (app icons) from the SVGs in ../public/icons
   Sources/PendantKit/  protocol, drain engine, journal, segmenter, WebM muxer, outbox, uploaders, Bluetooth
   Sources/attest-pendant/
-  Tests/PendantKitTests/   29 tests, with Omi's golden protocol vectors under Fixtures/
-  App/Shared/          SwiftUI views, the web view, the pendant model, Keychain
+  Tests/PendantKitTests/   32 tests, with Omi's golden protocol vectors under Fixtures/
+  App/Shared/          SwiftUI views (Connect, error view, pendant panel), the web view and its load state and haptics, the app lock, the pendant model, Keychain
   App/iOS/, App/macOS/ app entry points (iOS also has the background-launch delegate)
 ```
 
@@ -24,14 +24,14 @@ The Xcode project compiles `PendantKit` straight from `Sources/PendantKit` (two 
 
 ```sh
 cd apple
-swift test                       # 29 tests, no pendant needed (the WebM test uses ffmpeg if you have it)
+swift test                       # 32 tests, no pendant needed (the WebM test uses ffmpeg if you have it)
 brew install xcodegen
 ./generate.sh                    # makes Attest.xcodeproj (gitignored; regenerate after pulling changes)
 open Attest.xcodeproj
 swift run attest-pendant help    # the CLI
 ```
 
-Regenerating resets the project's signing fields to whatever the environment says, so re-run it with your team and bundle id each time (next sections).
+Adding or removing Swift files (or changing `project.yml`) needs a regenerate. Regenerating resets the project's signing fields to whatever the environment says, so re-run it with your team and bundle id each time (next sections).
 
 ## Set Attest up first, then point the app at it
 
@@ -70,6 +70,15 @@ A **free** (Personal) team works but the app stops opening after 7 days and has 
 
 For the Mac app: the same steps with the **Attest-macOS** target. It is sandboxed with the Bluetooth entitlement already set.
 
+## In the app
+
+- **Connect screen.** One required field, the server address (`attest.example.com` is enough; `https://` is added). **Paste** accepts an address or an `attest://connect` link. The pendant Client ID and secret are folded away under *Pendant sign-in (optional)*. Connect first checks that the address answers like an Attest and says what is wrong if not; a sign-in wall (Cloudflare Access) counts as fine, because you sign in inside the app. Opening an `attest://connect` link asks once, showing the host, with a warning for plain http.
+- **When the server is down.** A splash shows during the first load. If the page cannot load, the app shows what happened with **Try again** and **Change server**. Pull down on Home to refresh it in place.
+- **Haptics.** The web UI asks the app for haptic taps (to-do check-off, recording start and stop, tab changes, destructive confirmations) over the `attest` message handler. Nothing happens in a browser or on the Mac.
+- **Lock.** Settings > **Lock Attest** asks for Face ID, Touch ID or your passcode on launch and after 30 seconds away, and covers the app switcher. Turning it on first proves the check works, so a phone with no passcode cannot lock you out. The pendant's background sync is unaffected (it never shows the web view, and the Keychain secret stays readable after first unlock, on this device only). The app declares `NSFaceIDUsageDescription` in `project.yml`.
+- **Server row.** Settings inside the app starts with the connected host, **Pendant sync** and **Change server**, so you no longer need to dig through the pendant panel.
+- **Text size.** The page follows the iPhone's text size, from 90% to 150%.
+
 ## Background sync on iPhone
 
 iOS never lets an app run on a schedule it picks, so there are three mechanisms, and together they usually keep up:
@@ -107,6 +116,6 @@ The app allows plain `http://localhost` for this (an App Transport Security exce
 
 ## What is and is not verified
 
-Verified by tests (29): Omi's golden protocol vectors byte for byte (commands and parsing), the drain sequence against a scripted fake pendant (ACK safety, stalls, disk failures, cancellation when iOS ends the run), crash-safe storage, an unset pendant clock, WebM output decoded by ffmpeg, uploads against a stub server, a real background `URLSession` taking its body from a file without queuing a recording twice, and the `attest://connect` link (including refusing plain http and odd schemes). Both apps compile for iOS and macOS, and the iOS app was run in the Simulator: the first-run screen, the link handler, and the web UI's phone layout in real iOS WebKit.
+Verified by tests (32): Omi's golden protocol vectors byte for byte (commands and parsing), the drain sequence against a scripted fake pendant (ACK safety, stalls, disk failures, cancellation when iOS ends the run), crash-safe storage, an unset pendant clock, WebM output decoded by ffmpeg, uploads against a stub server, a real background `URLSession` taking its body from a file without queuing a recording twice, the `attest://connect` link (including refusing plain http and odd schemes), the server check on the Connect screen (address clean-up and what each answer means), and when the app lock asks again. Both apps compile for iOS and macOS, and the iOS app was run in the Simulator: the Connect screen, the link handler, the lock on launch, large text, and the web UI's phone layout in real iOS WebKit. Haptics, pull-to-refresh, swipe and long-press, and real microphone recording have not been exercised on a device.
 
 **Not yet verified: a real pendant, and real iOS background launches.** Nothing here has been run against hardware, and the Simulator has no Bluetooth, so the wake-on-reconnect and scheduled-task paths are written to Apple's documented behaviour but not exercised. Expect to debug the first real connection and to watch the first few background syncs (Xcode > Debug > Attach to Process, or the Console app on your Mac while the phone is plugged in).

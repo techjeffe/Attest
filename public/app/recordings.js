@@ -1,6 +1,7 @@
 // Recording detail view: open, render, speaker chips, mind map tabs, process.
 
 import { $, esc, md } from './dom.js';
+import { confirmSheet } from './confirm.js';
 import { api } from './api.js';
 import { state } from './state.js';
 import { refresh, refreshChats } from './lists.js';
@@ -276,7 +277,7 @@ export function render(r) {
   if ($('recover')) $('recover').onclick = () => recover(r);
   if ($('retry')) $('retry').onclick = () => process(r, { force: true });
   if ($('reset-names')) $('reset-names').onclick = async () => {
-    if (!confirm('Clear all speaker names on this recording, including ones you confirmed?')) return;
+    if (!(await confirmSheet({ title: 'Clear speaker names?', message: 'This clears every name on this recording, including ones you confirmed.', confirmLabel: 'Clear names', destructive: true }))) return;
     $('reset-names').disabled = true;
     try {
       render(await api(`/recordings/${r.id}/reset-speakers`, { method: 'POST' }));
@@ -310,7 +311,7 @@ export function render(r) {
   };
   const undo = $('undo-shape');
   if (undo) undo.onclick = async () => {
-    if (!confirm('Undo this? The pieces made from it are removed and the original comes back.')) return;
+    if (!(await confirmSheet({ title: 'Undo this change?', message: 'The pieces made from it are removed and the original comes back.', confirmLabel: 'Undo' }))) return;
     try {
       const out = await api(`/recordings/${r.id}/undo-reshape`, { method: 'POST' });
       state.current = out.restored[0];
@@ -320,7 +321,7 @@ export function render(r) {
   };
   const reshape = $('reshape');
   if (reshape) reshape.onclick = async () => {
-    if (!confirm('Split this wherever there is a long silence, and trim dead air at the start and end? Each piece is summarized again.')) return;
+    if (!(await confirmSheet({ title: 'Split by silence?', message: 'Splits wherever there is a long silence and trims dead air at the start and end. Each piece is summarized again.', confirmLabel: 'Split' }))) return;
     reshape.disabled = true; reshape.textContent = 'Working…';
     try {
       const out = await api(`/recordings/${r.id}/reshape`, { method: 'POST' });
@@ -334,7 +335,7 @@ export function render(r) {
   if (joinPrev) joinPrev.onclick = async () => {
     const idx = state.recordings.findIndex((x) => x.id === r.id);
     const older = state.recordings[idx + 1];
-    if (!older || !confirm(`Join this with "${older.title}" as one call? The joined audio is transcribed and summarized again, and the two originals are kept so you can undo.`)) return;
+    if (!older || !(await confirmSheet({ title: 'Join as one call?', message: `Joins this with "${older.title}". The joined audio is transcribed and summarized again, and the two originals are kept so you can undo.`, confirmLabel: 'Join' }))) return;
     try {
       const out = await api('/recordings/merge', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ids: [older.id, r.id] }) });
       state.current = out.id;
@@ -343,7 +344,7 @@ export function render(r) {
     } catch (e) { alert(e.message); }
   };
   $('del').onclick = async () => {
-    if (!confirm('Delete this recording and its audio?')) return;
+    if (!(await confirmSheet({ title: 'Delete this recording?', message: 'The recording and its audio are deleted. This cannot be undone.', confirmLabel: 'Delete', destructive: true }))) return;
     await fetch('/api/recordings/' + r.id, { method: 'DELETE' });
     state.current = null;
     $('main').innerHTML = '<div class="empty">Deleted.</div>';

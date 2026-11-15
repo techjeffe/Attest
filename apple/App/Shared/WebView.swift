@@ -7,23 +7,100 @@ typealias PlatformViewRepresentable = UIViewRepresentable
 typealias PlatformViewRepresentable = NSViewRepresentable
 #endif
 
+/// Where the page is in loading, so the app can show a splash first and a real error (with Retry) instead of
+/// a blank screen when the server is down or the phone is offline.
+@MainActor
+final class WebLoader: ObservableObject {
+    enum State: Equatable { case loading, ready, failed(String) }
+    @Published var state: State = .loading
+    /// True once the page has loaded at least once: the splash is only for the first load.
+    @Published var hasLoaded = false
+    fileprivate weak var webView: WKWebView?
+
+    func reload() {
+        state = .loading
+        if webView?.url == nil { webView?.load(URLRequest(url: reloadURL)) } else { webView?.reload() }
+    }
+    var reloadURL: URL = URL(string: "about:blank")!
+
+    /// Tells the page what the app did with the lock switch, so Settings shows the truth.
+    func reportLock(_ on: Bool) {
+        webView?.evaluateJavaScript("window.attestNative && (window.attestNative.lock = \(on)); var b = document.getElementById('srv-lock'); if (b) b.checked = \(on);")
+    }
+}
+
 /// Attest itself: the same web app, with its phone layout and bottom tab bar. Sign-in (Cloudflare Access)
 /// happens inside it and the session persists.
 struct WebView: PlatformViewRepresentable {
     let url: URL
+    @ObservedObject var loader: WebLoader
     /// The page can ask the app to open its native pendant panel (Settings > Open pendant sync).
     var onOpenPendant: () -> Void = {}
+    /// Settings > Change server asks the app to show the Connect screen.
+    var onChangeServer: () -> Void = {}
+    /// Settings > Require Face ID asks the app to turn the lock on or off.
+    var onSetLock: (Bool) -> Void = { _ in }
+    var lockEnabled = false
 
-    func makeCoordinator() -> Coordinator { Coordinator(onOpenPendant) }
+    func makeCoordinator() -> Coordinator { Coordinator(loader, onOpenPendant, onChangeServer, onSetLock) }
 
-    final class Coordinator: NSObject, WKUIDelegate, WKScriptMessageHandler {
+    final class Coordinator: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessageHandler {
         let onOpenPendant: () -> Void
-        init(_ f: @escaping () -> Void) { onOpenPendant = f }
+        let onChangeServer: () -> Void
+        let onSetLock: (Bool) -> Void
+        let loader: WebLoader
+        init(_ l: WebLoader, _ f: @escaping () -> Void, _ g: @escaping () -> Void, _ h: @escaping (Bool) -> Void) { loader = l; onOpenPendant = f; onChangeServer = g; onSetLock = h }
+
         func userContentController(_ c: WKUserContentController, didReceive m: WKScriptMessage) {
-            if (m.body as? [String: Any])?["action"] as? String == "pendant" { DispatchQueue.main.async { self.onOpenPendant() } }
+            let body = m.body as? [String: Any]
+            switch body?["action"] as? String {
+            case "pendant": DispatchQueue.main.async { self.onOpenPendant() }
+            case "lock": if let on = body?["on"] as? Bool { DispatchQueue.main.async { self.onSetLock(on) } }
+            case "server": DispatchQueue.main.async { self.onChangeServer() }
+            case "haptic": Haptics.play(body?["style"] as? String)
+            default: break
+            }
+        }
+
+        // MARK: load state
+        func webView(_ w: WKWebView, didStartProvisionalNavigation n: WKNavigation!) { Task { @MainActor in loader.state = .loading } }
+        func webView(_ w: WKWebView, didFinish n: WKNavigation!) {
+            Task { @MainActor in loader.state = .ready; loader.hasLoaded = true }
+            endRefreshing(w)
+        }
+        func webView(_ w: WKWebView, didFail n: WKNavigation!, withError e: Error) { fail(w, e) }
+        func webView(_ w: WKWebView, didFailProvisionalNavigation n: WKNavigation!, withError e: Error) { fail(w, e) }
+        private func fail(_ w: WKWebView, _ e: Error) {
+            endRefreshing(w)
+            let ns = e as NSError
+            // A navigation replaced by another (a redirect, a tap while loading) is not a failure.
+            if ns.domain == NSURLErrorDomain && ns.code == NSURLErrorCancelled { return }
+            Task { @MainActor in loader.state = .failed(WebLoader.describe(ns)) }
+        }
+        private func endRefreshing(_ w: WKWebView) {
+            #if os(iOS)
+            DispatchQueue.main.async { w.scrollView.refreshControl?.endRefreshing() }
+            #endif
+        }
+
+        #if os(iOS)
+        /// 100 at the default size; larger or smaller with the system text size, within 90...150 percent.
+        static func textScale() -> CGFloat { min(1.5, max(0.9, UIFontMetrics.default.scaledValue(for: 1))) }
+        static func textSizeScript() -> String {
+            "document.documentElement.style.webkitTextSizeAdjust = '\(Int((textScale() * 100).rounded()))%';"
+        }
+        /// Pull-to-refresh: ask the page to refresh its own screen, falling back to a full reload when it is not running.
+        @objc func pulled(_ r: UIRefreshControl) {
+            guard let w = loader.webView else { r.endRefreshing(); return }
+            Task { @MainActor in
+                Haptics.play("light")
+                let handled = try? await w.callAsyncJavaScript(
+                    "if (typeof window.attestRefresh === 'function') { await window.attestRefresh(); return true } return false",
+                    contentWorld: .page) as? Bool
+                if handled == true { r.endRefreshing() } else { w.reload() }
+            }
         }
         // <input type=file> and microphone prompts work through the system sheets.
-        #if os(iOS)
         func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo,
                      type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) { decisionHandler(.prompt) }
         #endif
@@ -36,13 +113,32 @@ struct WebView: PlatformViewRepresentable {
         #endif
         cfg.mediaTypesRequiringUserActionForPlayback = []
         cfg.userContentController.add(c, name: "attest")
+        // What the page needs to know about the app it is running in (Settings shows the lock switch from this).
+        #if os(iOS)
+        cfg.userContentController.addUserScript(WKUserScript(source: Coordinator.textSizeScript(), injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        #endif
+        cfg.userContentController.addUserScript(WKUserScript(source: "window.attestNative = { lock: \(lockEnabled) };", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let v = WKWebView(frame: .zero, configuration: cfg)
         #if os(iOS)
         v.isOpaque = false
         v.backgroundColor = .clear
+        let rc = UIRefreshControl()
+        rc.addTarget(c, action: #selector(Coordinator.pulled(_:)), for: .valueChanged)
+        v.scrollView.refreshControl = rc
         #endif
         v.uiDelegate = c
+        v.navigationDelegate = c
         v.allowsBackForwardNavigationGestures = true
+        #if os(iOS)
+        // Dynamic Type: the page is sized in px, so scale its text by the system text size (Settings > Display &
+        // Brightness > Text Size, or Accessibility > Larger Text) with text-size-adjust, which reflows within the
+        // screen width. (pageZoom does not: it pushes the page off the right edge.)
+        NotificationCenter.default.addObserver(forName: UIContentSizeCategory.didChangeNotification, object: nil, queue: .main) { [weak v] _ in
+            v?.evaluateJavaScript(Coordinator.textSizeScript())
+        }
+        #endif
+        loader.webView = v
+        loader.reloadURL = url
         v.load(URLRequest(url: url))
         return v
     }
@@ -53,4 +149,39 @@ struct WebView: PlatformViewRepresentable {
     func makeNSView(context: Context) -> WKWebView { make(context.coordinator) }
     func updateNSView(_ v: WKWebView, context: Context) {}
     #endif
+}
+
+extension WebLoader {
+    /// A sentence for the error view.
+    nonisolated static func describe(_ e: NSError) -> String {
+        guard e.domain == NSURLErrorDomain else { return e.localizedDescription }
+        switch e.code {
+        case NSURLErrorNotConnectedToInternet: return "You appear to be offline."
+        case NSURLErrorCannotFindHost, NSURLErrorCannotConnectToHost, NSURLErrorTimedOut, NSURLErrorNetworkConnectionLost:
+            return "The server did not answer. Check that it is running and the address is right."
+        case NSURLErrorSecureConnectionFailed, NSURLErrorServerCertificateUntrusted: return "A secure connection could not be made."
+        default: return e.localizedDescription
+        }
+    }
+}
+
+/// Native haptics for the web UI: WKWebView ignores navigator.vibrate, so the page asks for them over the
+/// `attest` message handler. Unknown styles do nothing. A no-op on the Mac.
+enum Haptics {
+    static func play(_ style: String?) {
+        #if os(iOS)
+        DispatchQueue.main.async {
+            switch style {
+            case "light": UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            case "medium": UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            case "heavy": UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+            case "selection": UISelectionFeedbackGenerator().selectionChanged()
+            case "success": UINotificationFeedbackGenerator().notificationOccurred(.success)
+            case "warning": UINotificationFeedbackGenerator().notificationOccurred(.warning)
+            case "error": UINotificationFeedbackGenerator().notificationOccurred(.error)
+            default: break
+            }
+        }
+        #endif
+    }
 }

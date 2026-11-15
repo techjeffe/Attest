@@ -7,6 +7,7 @@
 
 import { $, esc } from './dom.js';
 import { api } from './api.js';
+import { confirmSheet } from './confirm.js';
 import { state } from './state.js';
 import { embedWindow, EMBED_MODEL } from './voiceembed.js';
 
@@ -128,7 +129,7 @@ export async function wireVoiceprintButtons(r) {
 }
 
 async function clearVoices(person, btn) {
-  if (!confirm(`Forget every saved voice sample for ${person.name}?`)) return;
+  if (!(await confirmSheet({ title: `Forget ${person.name}'s voice?`, message: 'Every saved voice sample for this person is removed. Their name stays.', confirmLabel: 'Forget voice', destructive: true }))) return;
   try {
     const { removed } = await api(`/people/${person.id}/voiceprints`, { method: 'DELETE' });
     btn.textContent = `Cleared (${removed})`;
