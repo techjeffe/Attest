@@ -15,6 +15,7 @@ import { api } from './api.js';
 import { state } from './state.js';
 import { refresh } from './lists.js';
 import { open } from './recordings.js';
+import { haptic } from './haptic.js';
 
 const SLICE_MS = 5000;
 // Stop 2MB short of the server's upload cap (24MB, or 48MB on OpenRouter; from /api/meta).
@@ -51,6 +52,7 @@ function startLevel(stream, btn, rec) {
 
 export async function startStop() {
   if (state.recorder) {
+    haptic('medium');
     state.recorder.stop();
     return;
   }
@@ -112,6 +114,7 @@ export async function startStop() {
   btn.disabled = false;
   btn.classList.add('on');
   btn.textContent = '■ Stop';
+  haptic('heavy');
   startLevel(stream, btn, rec);
   state.tick = setInterval(() => {
     const s = Math.floor((Date.now() - rec.startedAt) / 1000);

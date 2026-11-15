@@ -6,6 +6,7 @@ import { $ } from './dom.js';
 import { icon } from './icons.js';
 import { showToday } from './today.js';
 import { showAsk } from './chats.js';
+import { haptic } from './haptic.js';
 
 const bar = () => $('tabbar');
 
@@ -26,7 +27,7 @@ export function wireTabbar() {
     // Recording happens from the Recordings pane (the timer and live transcript live there).
     record: () => { setTab('recordings'); $('rec').click(); },
   };
-  b.onclick = (e) => { const t = e.target.closest('button[data-tab]'); if (t) go[t.dataset.tab]?.(); };
+  b.onclick = (e) => { const t = e.target.closest('button[data-tab]'); if (t) { if (t.dataset.tab !== 'record') haptic('selection'); go[t.dataset.tab]?.(); } };
   // Opening a recording from the list shows it full-screen.
   $('list').addEventListener('click', (e) => { if (e.target.closest('.card')) setTab('detail'); }, true);
   // Mirror the Today badge, and the red state while recording.

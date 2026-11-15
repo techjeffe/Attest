@@ -20,7 +20,12 @@ struct WebView: PlatformViewRepresentable {
         let onOpenPendant: () -> Void
         init(_ f: @escaping () -> Void) { onOpenPendant = f }
         func userContentController(_ c: WKUserContentController, didReceive m: WKScriptMessage) {
-            if (m.body as? [String: Any])?["action"] as? String == "pendant" { DispatchQueue.main.async { self.onOpenPendant() } }
+            let body = m.body as? [String: Any]
+            switch body?["action"] as? String {
+            case "pendant": DispatchQueue.main.async { self.onOpenPendant() }
+            case "haptic": Haptics.play(body?["style"] as? String)
+            default: break
+            }
         }
         // <input type=file> and microphone prompts work through the system sheets.
         #if os(iOS)
@@ -53,4 +58,25 @@ struct WebView: PlatformViewRepresentable {
     func makeNSView(context: Context) -> WKWebView { make(context.coordinator) }
     func updateNSView(_ v: WKWebView, context: Context) {}
     #endif
+}
+
+/// Native haptics for the web UI: WKWebView ignores navigator.vibrate, so the page asks for them over the
+/// `attest` message handler. Unknown styles do nothing. A no-op on the Mac.
+enum Haptics {
+    static func play(_ style: String?) {
+        #if os(iOS)
+        DispatchQueue.main.async {
+            switch style {
+            case "light": UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            case "medium": UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            case "heavy": UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+            case "selection": UISelectionFeedbackGenerator().selectionChanged()
+            case "success": UINotificationFeedbackGenerator().notificationOccurred(.success)
+            case "warning": UINotificationFeedbackGenerator().notificationOccurred(.warning)
+            case "error": UINotificationFeedbackGenerator().notificationOccurred(.error)
+            default: break
+            }
+        }
+        #endif
+    }
 }

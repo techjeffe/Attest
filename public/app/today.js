@@ -13,6 +13,7 @@ import { deepToggle, deepHint, wireDeep } from './ask.js';
 import { startChat } from './chats.js';
 import { icon } from './icons.js';
 import { noteHtml } from './recordings.js';
+import { haptic } from './haptic.js';
 
 let acks = new Set(); // brief items the owner has acknowledged (hidden), keyed by normalized text
 let token = 0; // bumps on every showToday(), so a slow response cannot paint over a newer screen
@@ -284,6 +285,7 @@ function wire(d, mine, date) {
         body: JSON.stringify({ i: Number(row.dataset.i), task: row.dataset.task, done: box.checked }),
       });
       row.classList.toggle('done', box.checked);
+      haptic(box.checked ? 'success' : 'light');
       loadBadge();
     } catch (err) {
       box.checked = !box.checked;
