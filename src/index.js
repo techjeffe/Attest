@@ -1,7 +1,7 @@
 // Attest Pro: record -> diarized transcript -> summary/actions/mindmap -> ask -> export.
 // Memory: structured facts per recording (memory.js) and, when the AI + VECTORS bindings
 // exist, a Vectorize semantic index (vectors.js). Without them Ask uses FTS5 keywords.
-// Deliberately skipped (see README): background queues.
+// Deliberately skipped (see docs/troubleshooting.md, "Known limits"): background queues.
 // (Chat threads live in src/routes/chats.js; retrieval is keyword-only.)
 //
 // This file is the router and the Worker entry point, nothing else. Logic lives in:

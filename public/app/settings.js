@@ -257,6 +257,9 @@ export function wireSettings() {
     $('set-custom').textContent = '';
     $('set-status').textContent = 'Loading…';
     $('settings-dialog').showModal();
+    // A modal focuses its first control, which is the provider <select>: on iOS that pops its picker open. Put focus
+    // on the dialog itself instead (it stays inside the dialog, so Escape and Tab still work).
+    $('settings-dialog').querySelector('.dlg')?.focus({ preventScroll: true });
     if (state.META?.local_mode) {
       $('set-provider').closest('label').style.display = 'none';
       try { await renderLocal(); $('set-status').textContent = ''; }

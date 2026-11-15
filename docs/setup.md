@@ -50,7 +50,7 @@ Attest turns recordings into notes, tasks and a searchable memory. It needs two 
 
 You can change your mind later. Your recordings live in whichever place you chose; moving them between routes is not supported, so for a first try, pick the route you expect to keep.
 
-**What does it cost?** Route A: you will add about $5 of credit to an AI account, which is roughly 50 hours of recordings. Cloudflare asks for a card to enable two of its features but does not charge for normal personal use. Routes B and C: nothing, apart from the electricity. See [Cost](README.md#cost) in the README for the detailed numbers.
+**What does it cost?** Route A: you will add about $5 of credit to an AI account, which is roughly 50 hours of recordings. Cloudflare asks for a card to enable two of its features but does not charge for normal personal use. Routes B and C: nothing, apart from the electricity. See [Cost](providers-and-costs.md#cost) in the README for the detailed numbers.
 
 ---
 
@@ -376,7 +376,7 @@ Wait until you see `Ready on http://localhost:8787`. Then open **[http://localho
 - **Back up `.wrangler/state`** inside the Attest folder. It holds all your recordings and notes. It is your only copy.
 - **Checking health:** `npm run local:check` re-tests everything and says what to fix.
 
-More detail on speakers, memory and settings: [Run it locally on a Mac](README.md#run-it-locally-on-a-mac-omlx).
+More detail on speakers, memory and settings: [Run it locally on a Mac](run-locally.md#run-it-locally-on-a-mac-omlx).
 
 ---
 
@@ -483,7 +483,7 @@ A 48-second two-person recording was tested and came back fully processed in abo
 
 The steps are the same, with these swaps: install Node from nodejs.org or your package manager, install Ollama with its Linux installer from ollama.com, run the same `docker run` command (on one line, without the backticks) and the same `curl` download in place of `Invoke-RestMethod`, and set `OLLAMA_CONTEXT_LENGTH=32768` in the Ollama service's environment. This has not been tested; please report what you find.
 
-More detail: [Run it locally on Windows or Linux](README.md#run-it-locally-on-windows-or-linux).
+More detail: [Run it locally on Windows or Linux](run-locally.md#run-it-locally-on-windows-or-linux).
 
 ---
 
@@ -491,7 +491,7 @@ More detail: [Run it locally on Windows or Linux](README.md#run-it-locally-on-wi
 
 If you wear a Limitless pendant, a separate Mac or iPhone app can collect its audio over Bluetooth and send it to Attest. **This is the one part of Attest that is not point-and-click**: the app is built from source with Apple's developer tools (Xcode), and putting it on your own iPhone needs an Apple developer account. If that sounds like too much, use Attest's built-in recorder, or Omi (which imports the pendant's transcripts) instead.
 
-If you do want it, the instructions are in [apple/README.md](apple/README.md). It works with Route A (it signs in with a special device key that the Cloudflare setup can create for you, which is why 3.6 offers the extra "Service Tokens" permission) and needs Attest to be reachable on the internet.
+If you do want it, the instructions are in [apple/README.md](../apple/README.md). It works with Route A (it signs in with a special device key that the Cloudflare setup can create for you, which is why 3.6 offers the extra "Service Tokens" permission) and needs Attest to be reachable on the internet.
 
 ---
 
@@ -585,4 +585,4 @@ Find what you saw, and try the fix beside it.
 
 **Anything else**
 
-Run `npm run local:check` (Routes B and C) for a plain health report, and read the longer [Troubleshooting](README.md#troubleshooting) table in the README. If you are still stuck, [open an issue](https://github.com/techjeffe/Attest/issues) with: which route you chose, the step number you were on, and what you saw (a screenshot or the last lines of the terminal are perfect). **Never paste an API key or token into an issue.**
+Run `npm run local:check` (Routes B and C) for a plain health report, and read the longer [Troubleshooting](troubleshooting.md#troubleshooting) table in the README. If you are still stuck, [open an issue](https://github.com/techjeffe/Attest/issues) with: which route you chose, the step number you were on, and what you saw (a screenshot or the last lines of the terminal are perfect). **Never paste an API key or token into an issue.**
