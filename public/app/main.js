@@ -39,11 +39,14 @@ import { wireScope, areaQuery } from './scope.js';
   wirePersona();
   // Changing the area reloads the sidebar and whichever top-level screen is showing. A recording
   // that is open stays open (it belongs to whatever area it is in).
-  wireScope(async () => {
+  const reloadScreen = async () => {
     await refresh();
     if (state.current) return;
     if (state.screen === 'ask') showAsk(); else showToday();
-  });
+  };
+  wireScope(reloadScreen);
+  // Pull-to-refresh in the iPhone app (apple/App/Shared/WebView.swift) calls this; without it the app reloads the page.
+  window.attestRefresh = reloadScreen;
   $('home').onclick = showToday;
   $('brand').onclick = showToday;
   $('nav-ask').onclick = showAsk;

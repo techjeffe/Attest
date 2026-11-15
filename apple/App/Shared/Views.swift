@@ -5,6 +5,7 @@ struct RootView: View {
     @ObservedObject private var pendant = PendantModel.shared
     @State private var showPendant = false
     @State private var showSetup = false
+    @StateObject private var loader = WebLoader()
     @State private var incoming: IncomingLink?
 
     var body: some View {
@@ -13,7 +14,8 @@ struct RootView: View {
                 ZStack(alignment: .bottomTrailing) {
                     // Behind the page, so the status-bar strip is the app's own dark, not white.
                     Color(red: 9 / 255, green: 9 / 255, blue: 11 / 255).ignoresSafeArea()
-                    WebView(url: url, onOpenPendant: { showPendant = true }).ignoresSafeArea(edges: .bottom)
+                    WebView(url: url, loader: loader, onOpenPendant: { showPendant = true }).ignoresSafeArea(edges: .bottom)
+                    LoadOverlay(loader: loader, host: url.host ?? "", change: { showSetup = true })
                     // Only when there is something to say (recordings waiting, syncing, a problem), clear of the
                     // header and the tab bar. Otherwise the pendant lives in Settings > Open pendant sync.
                     if pendant.needsAttention {
@@ -162,6 +164,9 @@ struct SetupView: View {
         .scrollContentBackground(.hidden)
         .background(Color(red: 9 / 255, green: 9 / 255, blue: 11 / 255).ignoresSafeArea())
         .frame(maxWidth: 520)
+        #if os(macOS)
+        .frame(minWidth: 420, minHeight: 560)
+        #endif
         .sheet(isPresented: $showHelp) { SetupHelp() }
         .onAppear { if pendant.server.isEmpty { focus = .server } }
     }
@@ -204,6 +209,9 @@ struct SetupHelp: View {
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
         .presentationDetents([.medium])
+        #if os(macOS)
+        .frame(minWidth: 380, minHeight: 320)
+        #endif
     }
 }
 
@@ -225,5 +233,37 @@ struct ConnectConfirm: View {
         }
         .padding(24)
         .presentationDetents([.medium])
+        #if os(macOS)
+        .frame(minWidth: 380)
+        #endif
+    }
+}
+
+/// Over the web view: a splash during the first load, and a real error with Retry instead of a blank screen.
+struct LoadOverlay: View {
+    @ObservedObject var loader: WebLoader
+    var host: String
+    var change: () -> Void
+
+    var body: some View {
+        Group {
+            switch loader.state {
+            case .failed(let why):
+                VStack(spacing: 14) {
+                    Image(systemName: "wifi.exclamationmark").font(.system(size: 44)).foregroundStyle(.secondary)
+                    Text("Can't reach \(host)").font(.title3.bold())
+                    Text(why).font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    Button { loader.reload() } label: { Text("Try again").frame(maxWidth: 220) }
+                        .buttonStyle(.borderedProminent).controlSize(.large)
+                    Button("Change server", action: change)
+                }
+                .padding(32).frame(maxWidth: .infinity, maxHeight: .infinity).background(Color(red: 9 / 255, green: 9 / 255, blue: 11 / 255))
+            case .loading where !loader.hasLoaded:
+                ProgressView().controlSize(.large).frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(red: 9 / 255, green: 9 / 255, blue: 11 / 255))
+            default: EmptyView()
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: loader.state)
     }
 }
