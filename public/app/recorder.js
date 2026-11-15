@@ -15,7 +15,7 @@ import { api } from './api.js';
 import { state } from './state.js';
 import { refresh } from './lists.js';
 import { open } from './recordings.js';
-import { haptic } from './haptic.js';
+import { haptic, reportRecording } from './haptic.js';
 import { toast } from './toast.js';
 
 const SLICE_MS = 5000;
@@ -68,6 +68,15 @@ async function keepAwake(on) {
   } catch { /* unsupported or refused */ }
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && state.recorder) keepAwake(true); });
+
+// The app's Action Button shortcut (apple/App/iOS/RecordIntent.swift) calls this: start | stop | toggle.
+// Starting when already recording, or stopping when idle, does nothing.
+export async function attestRecord(command = 'toggle') {
+  const on = Boolean(state.recorder);
+  if (command === 'start' && on) return;
+  if (command === 'stop' && !on) return;
+  await startStop();
+}
 
 export async function startStop() {
   if (state.recorder) {
@@ -135,6 +144,7 @@ export async function startStop() {
   btn.textContent = '■ Stop';
   haptic('heavy');
   keepAwake(true);
+  reportRecording(true);
   startLevel(stream, btn, rec);
   state.tick = setInterval(() => {
     const s = Math.floor((Date.now() - rec.startedAt) / 1000);
@@ -191,6 +201,7 @@ async function finish(rec) {
   rec.previewOn = false;
   clearInterval(state.tick);
   keepAwake(false);
+  reportRecording(false);
   rec.stream.getTracks().forEach((t) => t.stop());
   const ms = Date.now() - rec.startedAt;
   $('rec').classList.remove('on');

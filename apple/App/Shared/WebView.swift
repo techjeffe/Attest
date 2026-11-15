@@ -23,6 +23,11 @@ final class WebLoader: ObservableObject {
     }
     var reloadURL: URL = URL(string: "about:blank")!
 
+    /// Hands a start/stop/toggle to the page (window.attestRecord in recorder.js).
+    func sendRecording(_ c: RecordingCommand) {
+        webView?.evaluateJavaScript("window.attestRecord && window.attestRecord('\(c.rawValue)')")
+    }
+
     /// Tells the page what the app did with the lock switch, so Settings shows the truth.
     func reportLock(_ on: Bool) {
         webView?.evaluateJavaScript("window.attestNative && (window.attestNative.lock = \(on)); var b = document.getElementById('srv-lock'); if (b) b.checked = \(on);")
@@ -57,6 +62,7 @@ struct WebView: PlatformViewRepresentable {
             case "pendant": DispatchQueue.main.async { self.onOpenPendant() }
             case "lock": if let on = body?["on"] as? Bool { DispatchQueue.main.async { self.onSetLock(on) } }
             case "server": DispatchQueue.main.async { self.onChangeServer() }
+            case "recording": if let on = body?["on"] as? Bool { DispatchQueue.main.async { RecordingCommands.shared.isRecording = on } }
             case "haptic": Haptics.play(body?["style"] as? String)
             default: break
             }

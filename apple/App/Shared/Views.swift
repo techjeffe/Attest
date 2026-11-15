@@ -7,6 +7,7 @@ struct RootView: View {
     @State private var showSetup = false
     @StateObject private var loader = WebLoader()
     @ObservedObject private var lock = AppLock.shared
+    @ObservedObject private var commands = RecordingCommands.shared
     @Environment(\.scenePhase) private var phase
     @State private var incoming: IncomingLink?
 
@@ -39,6 +40,10 @@ struct RootView: View {
             if p == .active { lock.didReturn(); Task { await lock.unlock() } } else { lock.didLeave() }
         }
         .task { await lock.unlock() }
+        // Action Button / Shortcuts: deliver once the page is up and the app is not behind the lock cover.
+        .onChange(of: commands.pending) { _ in deliverRecording() }
+        .onChange(of: loader.state) { _ in deliverRecording() }
+        .onChange(of: lock.locked) { _ in deliverRecording() }
         .sheet(isPresented: $showSetup) { SetupView(pendant: pendant) { showSetup = false }.preferredColorScheme(.dark) }
         .task { pendant.refreshQueue() }
         // attest://connect?... from setup. Anyone can send you a link, so the address is confirmed first.
@@ -49,6 +54,14 @@ struct RootView: View {
                            cancel: { incoming = nil })
                 .preferredColorScheme(.dark)
         }
+    }
+}
+
+extension RootView {
+    @MainActor func deliverRecording() {
+        guard let c = commands.pending, loader.state == .ready, !(lock.enabled && lock.locked) else { return }
+        commands.pending = nil
+        loader.sendRecording(c)
     }
 }
 

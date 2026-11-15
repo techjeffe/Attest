@@ -6,6 +6,13 @@ export const STYLES = ['light', 'medium', 'heavy', 'selection', 'success', 'warn
 
 const bridge = () => (typeof window !== 'undefined' ? window.webkit?.messageHandlers?.attest : null);
 
+// Tells the app whether a recording is running, so its Action Button shortcut can map a second press to stop.
+export function reportRecording(on) {
+  const b = bridge();
+  if (!b) return false;
+  try { b.postMessage({ action: 'recording', on: Boolean(on) }); return true; } catch { return false; }
+}
+
 export function haptic(style = 'light') {
   if (!STYLES.includes(style)) return false;
   const b = bridge();

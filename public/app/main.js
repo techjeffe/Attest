@@ -6,7 +6,7 @@ import { state } from './state.js';
 import { refresh } from './lists.js';
 import { open } from './recordings.js';
 import { showAsk } from './chats.js';
-import { startStop, submit } from './recorder.js';
+import { startStop, submit, attestRecord } from './recorder.js';
 import { renderSources } from './sources.js';
 import { wireTabbar } from './tabbar.js';
 import { wireLibrary } from './library.js';
@@ -49,6 +49,7 @@ import { wireScope, areaQuery } from './scope.js';
   wireScope(reloadScreen);
   // Pull-to-refresh in the iPhone app (apple/App/Shared/WebView.swift) calls this; without it the app reloads the page.
   window.attestRefresh = reloadScreen;
+  window.attestRecord = attestRecord; // the iPhone Action Button shortcut starts and stops recording through this
   $('home').onclick = showToday;
   $('brand').onclick = showToday;
   $('nav-ask').onclick = showAsk;
