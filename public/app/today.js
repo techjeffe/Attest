@@ -2,7 +2,7 @@
 
 import { getArea, areaQuery } from './scope.js';
 import { confirmSheet } from './confirm.js';
-import { BUCKETS, groupReminders } from './reminders.js';
+import { BUCKETS, groupReminders, reminderBucket } from './reminders.js';
 import { $, esc, md } from './dom.js';
 import { api } from './api.js';
 import { state } from './state.js';
@@ -19,6 +19,8 @@ import { toast } from './toast.js';
 import { openMenu, closeMenu } from './menu.js';
 
 let acks = new Set(); // brief items the owner has acknowledged (hidden), keyed by normalized text
+const VIEWS = ['home', 'todos', 'week', 'prompts', 'people', 'memory'];
+let todoView = { full: false, bucket: '' }; // home shows the top few; the To-dos view shows all, optionally one bucket
 let token = 0; // bumps on every showToday(), so a slow response cannot paint over a newer screen
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -94,7 +96,21 @@ function decorateBrief(id) {
     }
     li.insertAdjacentHTML('afterbegin', `<button class="ack" data-key="${esc(key)}" title="Acknowledge: hide this item" aria-label="Acknowledge">✓</button>`);
   }
+  if (id === 'brief-card') compactBrief(card);
   if (hidden) card.insertAdjacentHTML('beforeend', `<div class="muted ack-note">${hidden} acknowledged item${hidden === 1 ? '' : 's'} hidden · <a href="#" class="ack-restore">Show all</a></div>`);
+}
+
+// Home's brief is the narrative only: the to-do sections repeat Needs you, so they are dropped, and the
+// rest fold to a title with a count (the first stays open) so the screen is a glance, not a scroll.
+const TODO_SECT = /due and overdue|overdue|waiting on others|^waiting\b|open items|action items/i;
+function compactBrief(card) {
+  const sects = [...card.querySelectorAll('details.sect')];
+  for (const d of sects) if (TODO_SECT.test(d.querySelector('summary')?.textContent || '')) d.remove();
+  card.querySelectorAll('details.sect').forEach((d, i) => {
+    const n = d.querySelectorAll('li').length;
+    if (n) d.querySelector('summary .chev')?.insertAdjacentHTML('beforebegin', `<span class="muted sect-n">${n}</span>`);
+    if (i > 0) d.removeAttribute('open');
+  });
 }
 
 function wireAcks(id) {
@@ -152,41 +168,53 @@ export async function showToday(opts) {
 
   acks = new Set(d.acks || []);
   openData = d.open;
-  // The weekly review is long: on a phone it stays folded except on Friday, when it is the point.
-  const weeklyOpen = !window.matchMedia?.('(max-width:767px)').matches || new Date().getDay() === 5;
   const me = getMe();
   const mineCount = me ? d.open.filter((x) => isMe(x.owner, me)).length : 0;
   if (!store.get('items')) store.set('items', me && mineCount ? 'mine' : 'all');
 
-  $('main').innerHTML = `
+  const hashView = typeof location !== 'undefined' ? location.hash.slice(1) : '';
+  const view = state.pendingPrompt ? 'prompts' : VIEWS.includes(opts?.view) ? opts.view : (VIEWS.includes(hashView) && hashView !== 'home' ? hashView : 'home');
+  todoView = { full: view === 'todos', bucket: opts?.bucket || '' };
+  const crumb = (title) => `<a href="#" class="crumb" id="back-home">${icon('arrow', 14).replace('<svg', '<svg style="transform:rotate(180deg)"')} Today</a><h2 style="margin:0 0 8px">${esc(title)}</h2>`;
+
+  const blocks = {
+    home: `
     <div class="row" style="justify-content:space-between;align-items:flex-end">
       <h2 style="margin:0">Today <span class="muted">${esc(new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }))}</span></h2>
     </div>
     ${d.has_recordings ? '' : '<div class="empty">Record or upload something and your day will start to fill in here.</div>'}
+    <div id="today-stats" class="stats"></div>
     <div class="today-grid">
       <div class="today-main">
         <div class="t-brief">
         <div class="row" style="justify-content:space-between;align-items:center"><h3 style="margin:0">Today's brief</h3><button id="brief-refresh" class="small">Refresh</button></div>
-        <div id="today-stats" class="stats"></div>
         <div class="card-box brief-hero" id="brief-card">${briefHtml(d.brief, d.has_recordings ? 'Generating…' : 'Nothing to brief yet.')}</div>
         </div>
         <div class="t-ask">
         ${omnibarHtml(d.people)}
-        <details style="margin-top:20px" ${d.weekly && weeklyOpen ? 'open' : ''}><summary><b>Weekly review</b> <span class="muted">(week of ${esc(d.week_start)})</span></summary>
-          <div class="card-box brief-hero" id="weekly-card" style="margin-top:8px">${briefHtml(d.weekly, d.has_recordings ? 'Generating…' : 'Nothing to review yet.')}</div>
-          <button id="weekly-refresh" class="small" style="margin-top:6px">Refresh</button>
-        </details>
+        <div class="homelinks">
+          <button data-view="week">This week</button><button data-view="prompts">Prompts</button><button data-view="people">People</button><button data-view="memory">Memory</button>
+        </div>
         </div>
       </div>
       <div class="today-side">
         <div class="row" style="justify-content:space-between;align-items:flex-end">
           <h3 style="margin:0">Needs you <span class="muted" style="font-weight:400">(${d.open_count})</span></h3>
-          <div class="row" id="items-filter"></div>
+          <button class="small" id="see-all">See all</button>
         </div>
         <div id="open-items" class="list reminders"></div>
       </div>
-    </div>
-    <h3>Prompts for your day</h3>
+    </div>`,
+    todos: `${crumb('To-dos')}
+      <div class="row" id="items-filter" style="margin-bottom:6px"></div>
+      <div id="today-stats" class="stats"></div>
+      <input id="todo-q" type="search" placeholder="Search to-dos…" aria-label="Search to-dos" style="width:100%;margin:10px 0 4px">
+      <div id="open-items" class="list reminders"></div>`,
+    week: `${crumb('This week')}
+      <div class="muted" style="margin-bottom:8px">Week of ${esc(d.week_start)}</div>
+      <div class="card-box brief-hero" id="weekly-card">${briefHtml(d.weekly, d.has_recordings ? 'Generating…' : 'Nothing to review yet.')}</div>
+      <button id="weekly-refresh" class="small" style="margin-top:8px">Refresh</button>`,
+    prompts: `${crumb('Prompts')}
     <div class="muted" style="margin-bottom:8px">One-click prompts over your recent recordings. Pick a person and a time window, choose a prompt, edit it if you like, then Run.</div>
     <div class="row"><select id="p-person">${personOpts}</select>
       <select id="p-days"><option value="1">last day</option><option value="7">last 7 days</option><option value="14" selected>last 14 days</option><option value="30">last 30 days</option><option value="60">last 60 days</option></select></div>
@@ -194,20 +222,25 @@ export async function showToday(opts) {
     <textarea id="p-text" rows="3" style="width:100%;margin-top:10px" placeholder="Pick a prompt above, or write your own…"></textarea>
     <div class="row" style="margin-top:6px"><button class="primary" id="p-run">Run</button><span class="muted" id="p-status"></span></div>
     <div id="p-out" style="margin-top:12px"></div>
-    <h3>People</h3>
+    <details style="margin-top:22px"><summary class="muted">What runs on its own</summary>
+      <label class="row" style="gap:8px;margin:10px 0" title="Write today's brief and the weekly review automatically when you open Attest. Each costs one small model call."><input type="checkbox" id="auto-on" ${autoOn() ? 'checked' : ''}> Write briefs automatically</label>
+      <ul class="muted">${autoNotes}</ul></details>`,
+    people: `${crumb('People')}
     <div class="muted" style="margin-bottom:8px">Everyone Attest knows by name. If you named the same person two ways (for example “Jeff” and “Jeff Eberhard”), merge them so their recordings, voice samples and memory become one person.</div>
     <div id="people-suggest"></div>
-    <div id="people-list" class="list"><div class="muted" style="padding:12px 0">Loading…</div></div>
-    <h3>Memory</h3>
+    <div id="people-list" class="list"><div class="muted" style="padding:12px 0">Loading…</div></div>`,
+    memory: `${crumb('Memory')}
     <div class="muted" id="mem-status">Loading…</div>
     <div class="muted" style="font-size:12px;margin-top:2px">Facts about someone Attest could not name stay here for a week so you can tag the speaker. After that they leave this list but stay searchable in Ask.</div>
     <div class="row" style="margin:8px 0"><select id="mem-kind"><option value="">All kinds</option></select>
       <select id="mem-person"><option value="">Anyone</option></select>
       <button id="mem-build" class="small" hidden></button></div>
-    <div id="mem-list" class="list"></div>
-    <details style="margin-top:22px"><summary class="muted">What runs on its own</summary>
-      <label class="row" style="gap:8px;margin:10px 0" title="Write today's brief and the weekly review automatically when you open Attest. Each costs one small model call."><input type="checkbox" id="auto-on" ${autoOn() ? 'checked' : ''}> Write briefs automatically</label>
-      <ul class="muted">${autoNotes}</ul></details>`;
+    <div id="mem-list" class="list"></div>`,
+  };
+  $('main').innerHTML = blocks[view];
+  if ($('back-home')) $('back-home').onclick = (e) => { e.preventDefault(); showToday(); };
+  for (const b of $('main').querySelectorAll('.homelinks [data-view]')) b.onclick = () => showToday({ view: b.dataset.view });
+  if ($('see-all')) $('see-all').onclick = () => showToday({ view: 'todos' });
 
   wire(d, mine, date);
   for (const id of ['brief-card', 'weekly-card']) {
@@ -330,13 +363,13 @@ function wireSwipeDismiss(list, { rowSel = '.task', ok = (row) => row.dataset.re
 }
 
 function wire(d, mine, date) {
-  wireOmnibar(date, mine);
-  $('auto-on').onchange = () => store.set('auto', $('auto-on').checked ? 'on' : 'off');
-  $('brief-refresh').onclick = () => generate('today', date, mine, true);
-  $('weekly-refresh').onclick = () => generate('weekly', date, mine, true);
+  if ($('t-ask')) wireOmnibar(date, mine);
+  if ($('auto-on')) $('auto-on').onchange = () => store.set('auto', $('auto-on').checked ? 'on' : 'off');
+  if ($('brief-refresh')) $('brief-refresh').onclick = () => generate('today', date, mine, true);
+  if ($('weekly-refresh')) $('weekly-refresh').onclick = () => generate('weekly', date, mine, true);
 
-  wireSwipeDismiss($('open-items'));
-  $('open-items').onclick = async (e) => {
+  if ($('open-items')) wireSwipeDismiss($('open-items'));
+  if ($('open-items')) $('open-items').onclick = async (e) => {
     const more = e.target.closest('.task-more');
     if (more) {
       e.preventDefault();
@@ -377,6 +410,7 @@ function wire(d, mine, date) {
     }
   };
 
+  if (!$('p-run')) return;
   const setPrompt = (p) => {
     $('p-text').value = p.prompt;
     if (p.days) $('p-days').value = String(p.days);
@@ -507,6 +541,8 @@ async function buildMemory(mine) {
 
 let openData = [];
 
+const HOME_CAP = 5;
+
 export function renderOpenItems() {
   const box = $('open-items');
   if (!box) return;
@@ -514,28 +550,57 @@ export function renderOpenItems() {
   const mine = me ? openData.filter((x) => isMe(x.owner, me)) : [];
   const mode = me && store.get('items') === 'mine' ? 'mine' : 'all';
   const shown = mode === 'mine' ? mine : openData;
-  $('items-filter').innerHTML = me
-    ? `<button class="small chipbtn${mode === 'mine' ? ' on' : ''}" data-mode="mine">Mine (${mine.length})</button>
-       <button class="small chipbtn${mode === 'all' ? ' on' : ''}" data-mode="all">Everyone (${openData.length})</button>`
-    : '<a href="#" class="muted" id="set-me-link">Show only my items: set who you are in Settings</a>';
-  $('items-filter').onclick = (e) => {
-    if (e.target.closest('#set-me-link')) { e.preventDefault(); $('settings').click(); return; }
-    const b = e.target.closest('[data-mode]');
-    if (b) { store.set('items', b.dataset.mode); renderOpenItems(); }
-  };
+  const filter = $('items-filter');
+  if (filter) {
+    filter.innerHTML = me
+      ? `<button class="small chipbtn${mode === 'mine' ? ' on' : ''}" data-mode="mine">Mine (${mine.length})</button>
+         <button class="small chipbtn${mode === 'all' ? ' on' : ''}" data-mode="all">Everyone (${openData.length})</button>`
+      : '<a href="#" class="muted" id="set-me-link">Show only my items: set who you are in Settings</a>';
+    filter.onclick = (e) => {
+      if (e.target.closest('#set-me-link')) { e.preventDefault(); $('settings').click(); return; }
+      const b = e.target.closest('[data-mode]');
+      if (b) { store.set('items', b.dataset.mode); renderOpenItems(); }
+    };
+  }
   // Group by what needs doing when. With a name set, the "Everyone" view puts other people's items under
   // "Waiting on others" instead of mixing them in with yours.
   const today = localDate();
   const mineOf = (x) => !me || !x.owner || isMe(x.owner, me);
-  const groups = groupReminders(shown, today, mineOf);
-  box.innerHTML = BUCKETS.filter(([k]) => groups.get(k)?.length).map(([k, label]) =>
-    `<div class="bucket bucket-${k}"><div class="bucket-h">${esc(label)} <span class="muted">${groups.get(k).length}</span></div>${groups.get(k).map(itemRow).join('')}</div>`).join('')
-    || `<div class="muted" style="padding:12px 0">${mode === 'mine' ? 'Nothing assigned to you.' : 'Nothing open. Action items from your recordings show up here.'}</div>`;
-  // The at-a-glance row above the brief
+  const q = ($('todo-q')?.value || '').trim().toLowerCase();
+  let list = shown;
+  if (q) list = list.filter((x) => `${x.task} ${x.owner || ''} ${x.title || ''}`.toLowerCase().includes(q));
+  if (todoView.full && todoView.bucket) list = list.filter((x) => reminderBucket(x, today, mineOf(x)) === todoView.bucket);
+  const groups = groupReminders(list, today, mineOf);
+  let order = BUCKETS.filter(([k]) => groups.get(k)?.length);
+  let more = 0;
+  if (!todoView.full) {
+    // Home: only the few most urgent, in bucket order (overdue first)
+    let left = HOME_CAP;
+    order = order.map(([k, label]) => { const items = groups.get(k).slice(0, left); left -= items.length; groups.set(k, items); return [k, label]; })
+      .filter(([k]) => groups.get(k).length);
+    more = list.length - HOME_CAP;
+  }
+  box.innerHTML = order.map(([k, label]) =>
+    `<div class="bucket bucket-${k}"><div class="bucket-h">${esc(label)} <span class="muted">${(todoView.full ? list.filter((x) => reminderBucket(x, today, mineOf(x)) === k).length : groups.get(k).length)}</span></div>${groups.get(k).map(itemRow).join('')}</div>`).join('')
+    || `<div class="muted" style="padding:12px 0">${q ? 'No to-dos match.' : mode === 'mine' ? 'Nothing assigned to you.' : 'Nothing open. Action items from your recordings show up here.'}</div>`;
+  if (more > 0) box.insertAdjacentHTML('beforeend', `<button class="small see-more" id="see-more">See all ${list.length} to-dos</button>`);
+  if ($('see-more')) $('see-more').onclick = () => showToday({ view: 'todos' });
+  if ($('see-all')) $('see-all').hidden = !openData.length;
+  if ($('todo-q') && !$('todo-q').dataset.wired) { $('todo-q').dataset.wired = '1'; $('todo-q').oninput = renderOpenItems; }
+  // The at-a-glance chips: counts that open the matching part of the To-dos view.
   const all = groupReminders(openData, today, mineOf);
-  const chip = (k, label, cls) => (all.get(k)?.length ? `<span class="stat ${cls}"><b>${all.get(k).length}</b> ${label}</span>` : '');
+  const chips = todoView.full ? BUCKETS.map(([k, l]) => [k, l.toLowerCase()]) : [['overdue', 'overdue'], ['today', 'due today'], ['week', 'this week'], ['slipping', 'slipping'], ['waiting', 'waiting on others']];
+  const cls = { overdue: 'bad', today: 'warn', slipping: 'warn' };
   const stats = $('today-stats');
-  if (stats) stats.innerHTML = chip('overdue', 'overdue', 'bad') + chip('today', 'due today', 'warn') + chip('week', 'this week', '') + chip('slipping', 'slipping', 'warn') + chip('waiting', 'waiting on others', '');
+  if (stats) {
+    stats.innerHTML = (todoView.full ? `<button class="stat${todoView.bucket ? '' : ' on'}" data-bucket="">All <b>${openData.length}</b></button>` : '')
+      + chips.filter(([k]) => all.get(k)?.length).map(([k, l]) => `<button class="stat ${cls[k] || ''}${todoView.bucket === k ? ' on' : ''}" data-bucket="${k}"><b>${all.get(k).length}</b> ${esc(l)}</button>`).join('');
+    stats.onclick = (e) => {
+      const b = e.target.closest('[data-bucket]');
+      if (!b) return;
+      if (todoView.full) { todoView.bucket = b.dataset.bucket; renderOpenItems(); } else showToday({ view: 'todos', bucket: b.dataset.bucket });
+    };
+  }
 }
 
 /* ---- people: see everyone, merge duplicates ---- */
@@ -602,7 +667,6 @@ async function loadPeople(mine, keepNotice = false) {
   }
   $('people-list').innerHTML = people.map((p) => personRow(p, people.filter((o) => o.id !== p.id))).join('')
     || '<div class="muted" style="padding:12px 0">No one yet. People appear here when you name a speaker on a recording.</div>';
-  if (typeof location !== 'undefined' && location.hash === '#people') $('people-list').scrollIntoView(); // a link straight to this section
 
   $('people-suggest').onclick = (e) => {
     const b = e.target.closest('.suggest-go');

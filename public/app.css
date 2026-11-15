@@ -452,7 +452,7 @@ button.danger { background:var(--danger, #ef4444); border-color:transparent; col
 @media (max-width:767px) {
   .today-grid { display:flex; flex-direction:column; align-items:stretch; gap:20px }
   .today-main { display:contents }
-  .t-brief { order:1 } .today-side { order:2 } .t-ask { order:3 }
+  .today-side { order:1 } .t-brief { order:2 } .t-ask { order:3 }
   /* Reclaim width and height: the brief is read on a phone, so drop the nested indents and trim type. */
   main { padding-left:calc(10px + var(--safe-l)); padding-right:calc(10px + var(--safe-r)) }
   .brief-hero { padding:6px 10px; font-size:14.5px; line-height:1.45; border-radius:var(--r-sm) }
@@ -521,3 +521,12 @@ button.danger { background:var(--danger, #ef4444); border-color:transparent; col
 @media (hover:hover) { .reminders .task .task-more { opacity:0 } .reminders .task:hover .task-more, .reminders .task .task-more:focus-visible { opacity:1 } }
 /* Swipeable rows: tell iOS the page may only pan vertically here, so a sideways drag reaches our touch handlers. */
 .reminders .task, .brief-hero li:has(> .ack) { touch-action:pan-y; position:relative }
+
+/* ---------- Home as a glance: stats, Needs you, a folded brief, links to the rest ---------- */
+.stat { background:transparent; font:inherit; font-size:12.5px; cursor:pointer; min-height:0 }
+.stat.on { background:var(--accent-soft); color:var(--accent-ink); border-color:transparent }
+.homelinks { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px }
+.homelinks button { flex:1 1 auto; min-height:40px }
+.see-more { width:100%; margin-top:10px }
+.sect-n { font-weight:400; font-size:12px; margin-left:auto; margin-right:8px }
+.sect > summary .sect-n + .chev { margin-left:0 }
