@@ -180,6 +180,7 @@ main .banner { margin:12px 0 }
 .omnibar input { flex:1; background:transparent; border:0; padding:6px 0; font-size:15px; box-shadow:none }
 .omnibar input:hover { border:0 } .omnibar input:focus-visible { outline:none }
 .omnibar kbd { margin-right:2px }
+@media (hover:none) { .cmdbtn kbd, .omnibar kbd { display:none } } /* no keyboard shortcut to advertise on a touch screen */
 
 /* ---------- tasks (action items, facts, people, chats) ---------- */
 .task { display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--border-subtle) }
@@ -308,7 +309,12 @@ dialog textarea, dialog input:not([type=checkbox]), dialog select { width:100% }
   main { padding:16px calc(16px + var(--safe-r)) 48px calc(16px + var(--safe-l)); overflow:visible } body > header { padding:var(--safe-t) calc(10px + var(--safe-r)) 0 calc(12px + var(--safe-l)) }
   .side-toggle { display:none } body.side-collapsed .wrap { grid-template-columns:minmax(0,1fr) } body.side-collapsed aside { visibility:visible }
   .tx-row { grid-template-columns:1fr; gap:6px } .bubble { max-width:92% } .talk-row { grid-template-columns:1fr }
-  .cmdbtn { min-width:0 } .scope { max-width:110px } .persona .who { display:none }
+  /* Header on a phone: logo, a search icon, and your avatar. The area filter becomes its own row under it (scope.js moves it). */
+  .cmdbtn { min-width:0; width:40px; height:40px; padding:0; justify-content:center; border-radius:999px; margin-left:auto } .cmd-label, .cmdbtn kbd { display:none }
+  .persona .who, .persona > svg { display:none } .persona { padding:2px; min-width:40px; min-height:40px; justify-content:center }
+  .scope-bar:not([hidden]) { display:flex; padding:8px calc(12px + var(--safe-r)) 0 calc(12px + var(--safe-l)) }
+  .scope-bar .scope { flex:1; max-width:none; min-height:40px; font-size:14px }
+  body[data-tab="detail"] .scope-bar { display:none }
   /* People rows and merge suggestions: name on its own line, actions underneath (a single flex line squeezed the name to one letter per line). */
   #people-list .task { flex-wrap:wrap }
   #people-list .task .body { flex:1 1 100% }

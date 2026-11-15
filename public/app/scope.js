@@ -24,8 +24,22 @@ export function renderScope() {
   sel.value = getArea();
 }
 
+// On a phone the filter sits in its own row under the header (the header only has room for the logo, search and
+// avatar); on desktop it stays in the header. One element, moved, so there is one set of listeners.
+function placeScope() {
+  const sel = $('area-scope'), bar = $('scope-bar');
+  if (!sel || !bar || !window.matchMedia) return;
+  const place = () => {
+    if (window.matchMedia('(max-width:767px)').matches) { bar.appendChild(sel); bar.hidden = false; }
+    else { $('persona').before(sel); bar.hidden = true; }
+  };
+  place();
+  window.matchMedia('(max-width:767px)').addEventListener?.('change', place);
+}
+
 // onChange runs after the choice is saved, so the screen in view can reload.
 export function wireScope(onChange) {
   renderScope();
+  placeScope();
   $('area-scope').onchange = (e) => { setArea(e.target.value); state.areaChanged = true; onChange(); };
 }
