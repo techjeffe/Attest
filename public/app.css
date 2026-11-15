@@ -519,3 +519,5 @@ button.danger { background:var(--danger, #ef4444); border-color:transparent; col
 .task-more { flex:none; align-self:flex-start; min-height:28px; width:28px; padding:0; border:0; background:transparent; color:var(--text-muted); display:inline-flex; align-items:center; justify-content:center; border-radius:6px }
 .task-more:hover { background:var(--bg-elevated); color:var(--text-primary) }
 @media (hover:hover) { .reminders .task .task-more { opacity:0 } .reminders .task:hover .task-more, .reminders .task .task-more:focus-visible { opacity:1 } }
+/* Swipeable rows: tell iOS the page may only pan vertically here, so a sideways drag reaches our touch handlers. */
+.reminders .task, .brief-hero li:has(> .ack) { touch-action:pan-y; position:relative }

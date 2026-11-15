@@ -210,7 +210,10 @@ export async function showToday(opts) {
       <ul class="muted">${autoNotes}</ul></details>`;
 
   wire(d, mine, date);
-  for (const id of ['brief-card', 'weekly-card']) { wireAcks(id); decorateBrief(id); }
+  for (const id of ['brief-card', 'weekly-card']) {
+    wireAcks(id); decorateBrief(id);
+    if ($(id)) wireSwipeDismiss($(id), { rowSel: 'li', ok: (li) => li.querySelector(':scope > .ack'), act: (li) => { delete $(id).dataset.swiped; li.querySelector(':scope > .ack').click(); } });
+  }
   renderOpenItems();
   loadPeople(mine);
   loadMemory(mine);
@@ -297,12 +300,13 @@ async function dismissTask(row) {
 }
 
 // Swipe a to-do left to dismiss it ("not a real to-do"): it leaves the lists and the brief, with Undo.
-function wireSwipeDismiss(list) {
+// For brief cards the row is a bullet with a ✓ and a swipe does what the ✓ does (hide it, 7 days).
+function wireSwipeDismiss(list, { rowSel = '.task', ok = (row) => row.dataset.rec, act = dismissTask } = {}) {
   let t = null;
   const reset = (row) => { if (row) { row.style.transform = ''; row.style.background = ''; } };
   list.addEventListener('touchstart', (e) => {
-    const row = e.target.closest('.task');
-    if (!row || !row.dataset.rec || e.touches.length !== 1) return;
+    const row = e.target.closest(rowSel);
+    if (!row || !ok(row) || e.touches.length !== 1) return;
     t = { row, x: e.touches[0].clientX, y: e.touches[0].clientY, dx: 0, swiping: false };
   }, { passive: true });
   list.addEventListener('touchmove', (e) => {
@@ -319,7 +323,7 @@ function wireSwipeDismiss(list) {
     list.dataset.swiped = '1'; setTimeout(() => delete list.dataset.swiped, 300);
     reset(row);
     if (dx >= -90) return;
-    await dismissTask(row);
+    await act(row);
   });
   list.addEventListener('touchcancel', () => { if (t) { reset(t.row); t = null; } });
   list.addEventListener('click', (e) => { if (list.dataset.swiped) { e.stopPropagation(); e.preventDefault(); } }, true);
