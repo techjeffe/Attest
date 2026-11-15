@@ -12,6 +12,8 @@ const API = 'https://api.cloudflare.com/client/v4';
 export const POLICY_NAME = 'Attest owner';
 export const APP_NAME = 'Attest';
 export const DEVICE_POLICY_NAME = 'Attest device app';
+import qrcode from 'qrcode-terminal';
+
 export const TOKEN_NAME = 'Attest device app';
 
 // What to tell the person after a service token exists: the three values for the Attest app, and a link that
@@ -26,8 +28,13 @@ export function deviceInstructions(host, token) {
   ];
   if (token?.clientId && token?.clientSecret) {
     const q = (v) => encodeURIComponent(v);
+    const link = `attest://connect?server=${q('https://' + host)}&id=${q(token.clientId)}&secret=${q(token.clientSecret)}`;
     lines.push('', 'Or open this link on the phone (AirDrop or Messages it to yourself); the app asks you to confirm the address:',
-      `  attest://connect?server=${q('https://' + host)}&id=${q(token.clientId)}&secret=${q(token.clientSecret)}`);
+      `  ${link}`);
+    // Or point the app's Scan button at this. It carries the secret, so it is only ever drawn here, in your terminal.
+    let qr = '';
+    qrcode.generate(link, { small: true }, (s) => { qr = s; });
+    if (qr) lines.push('', 'Or tap Scan on the app\'s first screen and point the camera at this:', qr.replace(/^/gm, '  ').trimEnd());
   }
   lines.push('The secret is not stored anywhere else. Save it now.');
   return lines.join('\n');

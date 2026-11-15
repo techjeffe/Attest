@@ -129,6 +129,7 @@ struct SetupView: View {
     @State private var checking = false
     @State private var problem: String?
     @State private var showHelp = false
+    @State private var scanning = false
     @FocusState private var focus: Field?
     private enum Field { case server, id, secret }
 
@@ -151,13 +152,12 @@ struct SetupView: View {
                     .textInputAutocapitalization(.never).keyboardType(.URL).textContentType(.URL)
                     #endif
                 PasteButton(payloadType: String.self) { strings in
-                    guard let text = strings.first else { return }
-                    if let url = URL(string: text.trimmingCharacters(in: .whitespacesAndNewlines)), let c = ConnectLink.parse(url) {
-                        pendant.server = c.server.absoluteString; pendant.clientId = c.clientId; pendant.clientSecret = c.clientSecret
-                    } else { pendant.server = text.trimmingCharacters(in: .whitespacesAndNewlines) }
-                    problem = nil
+                    if let text = strings.first { fill(from: text) }
                 }
                 .labelStyle(.titleAndIcon)
+                #if os(iOS)
+                Button { scanning = true } label: { Label("Scan QR code", systemImage: "qrcode.viewfinder") }
+                #endif
             } header: { Text("Server") } footer: {
                 if let problem { Label(problem, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red) }
                 else { Button("How do I get this?") { showHelp = true }.font(.footnote) }
@@ -190,7 +190,25 @@ struct SetupView: View {
         .frame(minWidth: 420, minHeight: 560)
         #endif
         .sheet(isPresented: $showHelp) { SetupHelp() }
+        #if os(iOS)
+        .fullScreenCover(isPresented: $scanning) {
+            ZStack(alignment: .topTrailing) {
+                QRScannerView { text in scanning = false; fill(from: text) }.ignoresSafeArea()
+                Button("Cancel") { scanning = false }.buttonStyle(.borderedProminent).padding()
+            }
+        }
+        #endif
         .onAppear { if pendant.server.isEmpty { focus = .server } }
+    }
+
+    /// A pasted or scanned attest://connect link fills in all three fields; anything else is taken as the address.
+    /// Nothing is saved until Connect is tapped.
+    private func fill(from text: String) {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let url = URL(string: t), let c = ConnectLink.parse(url) {
+            pendant.server = c.server.absoluteString; pendant.clientId = c.clientId; pendant.clientSecret = c.clientSecret
+        } else { pendant.server = t }
+        problem = nil
     }
 
     private func connect() async {

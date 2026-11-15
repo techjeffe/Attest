@@ -15,5 +15,8 @@
   },
   "devDependencies": {
     "wrangler": "^4.160.0"
+  },
+  "dependencies": {
+    "qrcode-terminal": "^0.12.0"
   }
 }

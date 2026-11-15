@@ -38,6 +38,7 @@ targets:
         UILaunchScreen: { UIColorName: LaunchBackground }
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         NSBluetoothAlwaysUsageDescription: Attest connects to your Limitless pendant over Bluetooth to copy its recordings into your Attest.
+        NSCameraUsageDescription: Attest uses the camera only to scan the QR code that connects the app to your server.
         NSFaceIDUsageDescription: Attest can ask for Face ID before it opens, to keep your recordings private.
         # Lets the app load a development server on this Mac (http://localhost). Your deployed https address is unaffected.
         NSAppTransportSecurity: { NSAllowsLocalNetworking: true }
