@@ -26,7 +26,7 @@ The Xcode project compiles `PendantKit` straight from `Sources/PendantKit` (two 
 cd apple
 swift test                       # 32 tests, no pendant needed (the WebM test uses ffmpeg if you have it)
 brew install xcodegen
-./generate.sh                    # makes Attest.xcodeproj (gitignored; regenerate after pulling changes)
+./generate.sh                    # makes Attest.xcodeproj (gitignored; regenerate after pulling changes; see Sign the app below for your signing details)
 open Attest.xcodeproj
 swift run attest-pendant help    # the CLI
 ```
@@ -59,6 +59,7 @@ npm run device-token   # creates the Client ID and secret, and prints them with 
    ```sh
    DEVELOPMENT_TEAM=ABCDE12345 ATTEST_BUNDLE_ID=com.yourname.attest ./generate.sh
    ```
+   Do that **once**. The script saves both values in `apple/signing.local.env` (gitignored, never committed) and reuses them, so from then on a plain `./generate.sh` keeps your team and bundle id, including after you pull changes that need a regenerate. Values you type on the command line win and replace the saved ones. Run it with nothing saved and you get the placeholder `com.attest.app` and no team, which it warns about.
    Your team id is the 10 characters under Xcode > Settings > Accounts > (team) or at developer.apple.com/account > Membership details. Or skip it and choose the team in Xcode (next step).
 3. **Check signing.** Open `Attest.xcodeproj`, select the **Attest-iOS** target > Signing & Capabilities: tick *Automatically manage signing* and choose your team. The background modes (Bluetooth, background processing) are already in the project, and iOS needs no special entitlement for Bluetooth.
 4. **Put the iPhone in developer mode.** Plug it in and trust the computer, then on the phone Settings > Privacy & Security > Developer Mode > on (it restarts).

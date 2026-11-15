@@ -14,6 +14,7 @@ wrangler.local.toml
 apple/.build/
 apple/build/
 apple/Attest.xcodeproj/
+apple/signing.local.env
 apple/App/iOS/Info.plist
 apple/App/macOS/Info.plist
 apple/App/macOS/Attest.entitlements
