@@ -14,7 +14,7 @@ struct RootView: View {
                 ZStack(alignment: .bottomTrailing) {
                     // Behind the page, so the status-bar strip is the app's own dark, not white.
                     Color(red: 9 / 255, green: 9 / 255, blue: 11 / 255).ignoresSafeArea()
-                    WebView(url: url, loader: loader, onOpenPendant: { showPendant = true }).ignoresSafeArea(edges: .bottom)
+                    WebView(url: url, loader: loader, onOpenPendant: { showPendant = true }, onChangeServer: { showSetup = true }).ignoresSafeArea(edges: .bottom)
                     LoadOverlay(loader: loader, host: url.host ?? "", change: { showSetup = true })
                     // Only when there is something to say (recordings waiting, syncing, a problem), clear of the
                     // header and the tab bar. Otherwise the pendant lives in Settings > Open pendant sync.
@@ -97,7 +97,7 @@ struct PendantSheet: View {
             Spacer()
         }
         .padding(20)
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
     }
 }
 

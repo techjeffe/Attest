@@ -31,18 +31,22 @@ struct WebView: PlatformViewRepresentable {
     @ObservedObject var loader: WebLoader
     /// The page can ask the app to open its native pendant panel (Settings > Open pendant sync).
     var onOpenPendant: () -> Void = {}
+    /// Settings > Change server asks the app to show the Connect screen.
+    var onChangeServer: () -> Void = {}
 
-    func makeCoordinator() -> Coordinator { Coordinator(loader, onOpenPendant) }
+    func makeCoordinator() -> Coordinator { Coordinator(loader, onOpenPendant, onChangeServer) }
 
     final class Coordinator: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessageHandler {
         let onOpenPendant: () -> Void
+        let onChangeServer: () -> Void
         let loader: WebLoader
-        init(_ l: WebLoader, _ f: @escaping () -> Void) { loader = l; onOpenPendant = f }
+        init(_ l: WebLoader, _ f: @escaping () -> Void, _ g: @escaping () -> Void) { loader = l; onOpenPendant = f; onChangeServer = g }
 
         func userContentController(_ c: WKUserContentController, didReceive m: WKScriptMessage) {
             let body = m.body as? [String: Any]
             switch body?["action"] as? String {
             case "pendant": DispatchQueue.main.async { self.onOpenPendant() }
+            case "server": DispatchQueue.main.async { self.onChangeServer() }
             case "haptic": Haptics.play(body?["style"] as? String)
             default: break
             }

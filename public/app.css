@@ -482,3 +482,17 @@ button.danger { background:var(--danger, #ef4444); border-color:transparent; col
   body[data-tab="record"] .rec-sub, body[data-tab="record"] #import-row { width:100% }
   body[data-tab="record"] .rec-sub > *, body[data-tab="record"] #import-row > * { min-height:44px }
 }
+
+/* ---------- Settings: folding groups, the server row, the local-mode note ---------- */
+.set-sec { margin-top:8px; border:1px solid var(--border-subtle); border-radius:12px; background:rgba(24,24,27,.4) }
+.set-sec > summary { display:flex; align-items:baseline; gap:10px; padding:12px 14px; font-weight:600; font-size:14px; cursor:pointer; list-style:none; min-height:44px; box-sizing:border-box }
+.set-sec > summary::-webkit-details-marker { display:none }
+.set-sec > summary::after { content:"›"; margin-left:auto; transition:transform .15s; color:var(--text-muted); font-size:18px }
+.set-sec[open] > summary::after { transform:rotate(90deg) }
+.set-sec > summary .muted { font-weight:400; font-size:12px }
+.set-sec-body { padding:0 14px 14px } .set-sec-body > * + * { margin-top:8px }
+.set-server { display:flex; align-items:center; gap:10px; padding:10px 14px; border:1px solid var(--border-subtle); border-radius:12px; background:rgba(24,24,27,.4) }
+.set-server .who { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis }
+.set-server .dot { width:9px; height:9px; border-radius:50%; background:var(--ok); flex:none }
+@media (max-width:767px) { .set-server { flex-wrap:wrap } .set-server .who { flex:1 1 60% } }
+.local-note > summary { cursor:pointer; font-size:13px }
