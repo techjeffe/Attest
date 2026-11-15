@@ -20,6 +20,7 @@ export function recordingCard(r, activeId) {
     <div class="rmeta">${avatarCluster(r.people)}${dur ? `<span title="Duration">${dur}</span>` : ''}
       <span>${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>${r.area && !getArea() && r.area !== 'work' ? `<span class="pill" title="Area">${areaLabel(r.area)}</span>` : ''}<span class="sp"></span>
       <span class="pill ${r.status}">${STATUS_LABEL[r.status] || esc(r.status)}</span></div>
+    ${r.status === 'error' ? `<div class="rerr"><span>${esc((r.error || 'Processing failed.').slice(0, 90))}</span><button type="button" class="small card-retry">Retry</button></div>` : ''}
   </div>`;
 }
 

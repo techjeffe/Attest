@@ -9,6 +9,7 @@ import { showAsk } from './chats.js';
 import { startStop, submit } from './recorder.js';
 import { renderSources } from './sources.js';
 import { wireTabbar } from './tabbar.js';
+import { wireLibrary } from './library.js';
 import { loadTemplates, wireTemplateDialog } from './templates.js';
 import { fillSelects, wireSettings } from './settings.js';
 import { showToday } from './today.js';
@@ -35,6 +36,7 @@ import { wireScope, areaQuery } from './scope.js';
     const card = e.target.closest('.card');
     if (card) open(card.dataset.id);
   };
+  wireLibrary();
   wirePalette();
   wirePersona();
   // Changing the area reloads the sidebar and whichever top-level screen is showing. A recording
