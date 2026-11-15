@@ -497,8 +497,11 @@ async function summarize(env, rec, id, owner, { transcript, accumulate, tokensIn
   // Items the user already ticked stay ticked when the same task comes back (re-summarize).
   const doneTasks = new Set((Array.isArray(rec.action_items) ? rec.action_items : [])
     .filter((a) => a?.done && a.task).map((a) => String(a.task).trim().toLowerCase()));
+  const dismissedTasks = new Set((Array.isArray(rec.action_items) ? rec.action_items : [])
+    .filter((a) => a?.dismissed && a.task).map((a) => String(a.task).trim().toLowerCase()));
   const items = normalizeActionItems(sj.action_items, localMs)
-    .map((a) => (doneTasks.has(a.task.toLowerCase()) ? { ...a, done: true } : a));
+    .map((a) => (doneTasks.has(a.task.toLowerCase()) ? { ...a, done: true } : a))
+    .map((a) => (dismissedTasks.has(a.task.toLowerCase()) ? { ...a, dismissed: true } : a));
   const unanswered = (Array.isArray(sj.unanswered) ? sj.unanswered : [])
     .map((q) => String(q || '').trim()).filter(Boolean).slice(0, 10);
 
@@ -624,7 +627,8 @@ export async function setActionDone(request, env, owner, id) {
   const rec = await readRow(env, id, owner);
   if (!rec) return fail('not found', 404);
   const items = Array.isArray(rec.action_items) ? rec.action_items : [];
-  if (!body || typeof body.done !== 'boolean') return fail('done (true or false) is required');
+  const hasDismiss = body && typeof body.dismissed === 'boolean';
+  if (!body || (typeof body.done !== 'boolean' && !hasDismiss)) return fail('done or dismissed (true or false) is required');
   // A page can be open while a recording is re-summarized, which rewrites its action list. When the
   // page says which task it means, find that task (the same position if it still matches, else the
   // first one worded the same) instead of trusting a position that may now be a different task.
@@ -634,10 +638,17 @@ export async function setActionDone(request, env, owner, id) {
     if (at < 0 || !same(items[at], body.task)) at = items.findIndex((a) => same(a, body.task));
     if (at < 0) return fail('that to-do has changed since this page loaded; refresh to see the current list', 409);
   } else if (at < 0) return fail('which action item? (i) is required');
-  const next = items.map((a, k) => (k === at ? { ...a, done: body.done } : a));
+  // dismissed: "this isn't a real to-do". It leaves every open list and the brief but stays stored.
+  const patch = hasDismiss ? { dismissed: body.dismissed } : { done: body.done };
+  const next = items.map((a, k) => {
+    if (k !== at) return a;
+    const m = { ...a, ...patch };
+    if (!m.dismissed) delete m.dismissed;
+    return m;
+  });
   await env.DB.prepare('UPDATE recordings SET action_items = ? WHERE id = ? AND owner = ?')
     .bind(JSON.stringify(next), id, owner).run();
-  return json({ ok: true, done: body.done });
+  return json({ ok: true, ...patch });
 }
 
 // POST /:id/speaker-turns {assign:[n,...]} (local mode): one speaker number per stored segment,

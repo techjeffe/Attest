@@ -61,7 +61,7 @@ export function openItems(rows, today) {
   const out = [];
   for (const r of rows || []) {
     (Array.isArray(r.action_items) ? r.action_items : []).forEach((a, i) => {
-      if (!a || a.done || !a.task) return;
+      if (!a || a.done || a.dismissed || !a.task) return;
       const iso = typeof a.due === 'string' && /^\d{4}-\d{2}-\d{2}/.test(a.due) ? a.due.slice(0, 10) : null;
       const age = Math.max(0, todayNum - dayNumber(r.created_at));
       const overdue = Boolean(iso && iso < today);
@@ -130,7 +130,7 @@ export function buildContext(rows, { since, person, deep = false, question = '' 
   const per = Math.max(800, Math.min(3500, Math.floor(budget / Math.max(1, picked.length))));
   const text = picked.map((r) => {
     const names = (Array.isArray(r.speakers) ? r.speakers : []).map((s) => (s.name && !isPlaceholderName(s.name) ? s.name : 'Unknown')).join(', ');
-    const open = (Array.isArray(r.action_items) ? r.action_items : []).filter((a) => a && !a.done && a.task)
+    const open = (Array.isArray(r.action_items) ? r.action_items : []).filter((a) => a && !a.done && !a.dismissed && a.task)
       .map((a) => `- ${a.task}${a.owner || a.due ? ` (${[a.owner, a.due].filter(Boolean).join(', ')})` : ''}`).join('\n');
     const facts = (r.facts || []).slice(0, 15)
       .map((f) => `- [${f.kind}${f.done ? ', done' : ''}]${f.person ? ` (${f.person})` : ''} ${f.text} -- "${f.quote}"`).join('\n');

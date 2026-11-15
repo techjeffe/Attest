@@ -216,7 +216,7 @@ export function render(r) {
     ${r.status === 'recording' || r.has_audio === false ? '' : playerHtml(r)}
     ${r.status !== 'ready' ? `<h3>Status</h3><div class="muted">${esc(r.status)}…</div>` : ''}
     ${r.summary ? `<h3>Summary</h3><div class="card-box">${noteHtml(r.summary)}</div>` : ''}
-    ${tasks.length ? `<h3>Action items</h3><div class="list">${tasks.map(taskRow).join('')}</div>` : ''}
+    ${tasks.length ? `<h3>Action items</h3><div class="list">${tasks.map((a, i) => (a.dismissed ? '' : taskRow(a, i))).join('')}</div>` : ''}
     ${mindmapCard(r.mindmaps)}
     ${renderUnanswered(r.unanswered)}
     ${renderSpeakerChips(r.speakers, r.status === 'ready')}

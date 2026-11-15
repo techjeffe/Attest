@@ -105,6 +105,7 @@ Optional settings (Worker variables): `SPLIT_GAP_MIN` (default 5 minutes), `TRIM
 - **Three mind maps** from the same summarize call, shown as tabs: **Topic** (subject matter), **Driver** (decisions and actions), **People** (who said what). Rendered in your browser with `markmap` on a dark canvas with zoom, fit-to-view and **SVG / PNG** download (PNG depends on your browser allowing it; SVG always works). Outline text is escaped before it is drawn.
 - Every recording also gets **unanswered questions** (asked but never clearly answered) and a **talk balance** table: each speaker's share of talk time, turns, questions, longest turn and cut-ins, measured from the stored turns.
 - Action items have **checkboxes that are saved**, and a re-summarize keeps your ticks.
+- **Dismiss a to-do that is not real.** On Home, swipe a to-do left (touch) or open its **⋯** menu and choose Dismiss (desktop). It leaves the reminders, the badge, the briefs and the recording's action list, a toast offers **Undo**, and a re-summarize keeps it dismissed. It is flagged `dismissed` in the stored item, not deleted: `PATCH /api/recordings/:id/actions {task, i, dismissed: true|false}`.
 
 ### What counts as an action item
 

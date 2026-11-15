@@ -16,6 +16,7 @@ import { icon } from './icons.js';
 import { noteHtml } from './recordings.js';
 import { haptic } from './haptic.js';
 import { toast } from './toast.js';
+import { openMenu, closeMenu } from './menu.js';
 
 let acks = new Set(); // brief items the owner has acknowledged (hidden), keyed by normalized text
 let token = 0; // bumps on every showToday(), so a slow response cannot paint over a newer screen
@@ -53,7 +54,8 @@ function itemRow(x) {
   return `<label class="task${x.tentative ? ' tentative' : ''}"${x.evidence ? ` title="${esc('“' + x.evidence + '”')}"` : ''} data-rec="${esc(x.rec_id)}" data-i="${x.i}" data-task="${esc(x.task)}">
     <input type="checkbox">
     <span class="body">${esc(x.task)}
-      <span class="meta">${who}${due}${age}<a href="#" class="open-rec" title="${esc(x.title)}">${esc(x.title)}</a></span></span></label>`;
+      <span class="meta">${who}${due}${age}<a href="#" class="open-rec" title="${esc(x.title)}">${esc(x.title)}</a></span></span>
+    <button type="button" class="task-more" aria-label="More actions" title="More">${icon('more', 16)}</button></label>`;
 }
 
 const ackKey = (t) => t.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim().slice(0, 200);
@@ -277,13 +279,74 @@ function wireOmnibar(date, mine) {
   $('t-ask').onkeydown = (e) => { if (e.key === 'Enter') askGo(); };
 }
 
+// Dismiss ("not a real to-do"): leaves the lists and the brief, stays stored; Undo brings it back.
+async function dismissTask(row) {
+  const call = (dismissed) => api(`/recordings/${row.dataset.rec}/actions`, {
+    method: 'PATCH', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ i: Number(row.dataset.i), task: row.dataset.task, dismissed }),
+  });
+  try {
+    await call(true);
+    haptic('light');
+    row.remove();
+    loadBadge();
+    toast('Dismissed', { action: 'Undo', onAction: () => call(false).then(() => showToday()).catch((err) => alert(err.message)) });
+  } catch (err) {
+    if (/changed since this page loaded/.test(err.message)) showToday(); else alert(err.message);
+  }
+}
+
+// Swipe a to-do left to dismiss it ("not a real to-do"): it leaves the lists and the brief, with Undo.
+function wireSwipeDismiss(list) {
+  let t = null;
+  const reset = (row) => { if (row) { row.style.transform = ''; row.style.background = ''; } };
+  list.addEventListener('touchstart', (e) => {
+    const row = e.target.closest('.task');
+    if (!row || !row.dataset.rec || e.touches.length !== 1) return;
+    t = { row, x: e.touches[0].clientX, y: e.touches[0].clientY, dx: 0, swiping: false };
+  }, { passive: true });
+  list.addEventListener('touchmove', (e) => {
+    if (!t) return;
+    const dx = e.touches[0].clientX - t.x, dy = e.touches[0].clientY - t.y;
+    if (!t.swiping) { if (Math.abs(dy) > 12) t = null; else if (dx < -12) t.swiping = true; if (!t || !t.swiping) return; }
+    t.dx = dx;
+    if (dx < 0) { t.row.style.transform = `translateX(${Math.max(dx, -140)}px)`; t.row.style.background = dx < -90 ? 'rgba(239,68,68,.22)' : ''; }
+  }, { passive: true });
+  list.addEventListener('touchend', async () => {
+    if (!t) return;
+    const { row, dx, swiping } = t; t = null;
+    if (!swiping) return;
+    list.dataset.swiped = '1'; setTimeout(() => delete list.dataset.swiped, 300);
+    reset(row);
+    if (dx >= -90) return;
+    await dismissTask(row);
+  });
+  list.addEventListener('touchcancel', () => { if (t) { reset(t.row); t = null; } });
+  list.addEventListener('click', (e) => { if (list.dataset.swiped) { e.stopPropagation(); e.preventDefault(); } }, true);
+}
+
 function wire(d, mine, date) {
   wireOmnibar(date, mine);
   $('auto-on').onchange = () => store.set('auto', $('auto-on').checked ? 'on' : 'off');
   $('brief-refresh').onclick = () => generate('today', date, mine, true);
   $('weekly-refresh').onclick = () => generate('weekly', date, mine, true);
 
+  wireSwipeDismiss($('open-items'));
   $('open-items').onclick = async (e) => {
+    const more = e.target.closest('.task-more');
+    if (more) {
+      e.preventDefault();
+      const row = more.closest('.task');
+      openMenu(more, `<button class="opt" data-act="open">Open recording</button><button class="opt" data-act="dismiss">Dismiss: not a real to-do</button>`, {
+        label: 'To-do actions',
+        onClick: (ev) => {
+          const b = ev.target.closest('[data-act]'); if (!b) return;
+          closeMenu();
+          if (b.dataset.act === 'open') open(row.dataset.rec); else dismissTask(row);
+        },
+      });
+      return;
+    }
     const link = e.target.closest('.open-rec');
     if (link) { e.preventDefault(); return open(link.closest('.task').dataset.rec); }
     const box = e.target.closest('input[type=checkbox]');
