@@ -43,7 +43,7 @@ Most AI note-takers are a monthly subscription, keep your conversations on someo
 | **One recording, one conversation** | Dead air is trimmed, different conversations are split apart, and pieces of one call are joined back together. Originals are kept and every change can be undone | nothing | [Conversation shaping](#conversation-shaping-one-recording-one-conversation) |
 | **Areas** | Every recording is filed under Work, Personal, Health or Learning, picked for you and easy to change; one dropdown at the top shows only one area | nothing | [Areas](#areas-work-personal-health-learning) |
 | **Devices you choose** | Tick the ones you use (the app, Pocket, Omi, a Limitless pendant); the main screen, setup and background sync follow your choice | nothing | [Choosing your devices](#choosing-your-devices) |
-| **Phone and Mac app** | Attest in a native shell, a bottom tab bar on phones, and a **Bluetooth pendant sync** with background upload on iPhone | an Apple developer account to run it on your phone | [apple/README.md](apple/README.md) |
+| **Phone and Mac app** | Attest in a native shell, a bottom tab bar on phones, an optional **Face ID lock**, and a **Bluetooth pendant sync** with background upload on iPhone | an Apple developer account to run it on your phone | [apple/README.md](apple/README.md) |
 | **Speaker labels** | Who said what, from OpenAI's diarize model or OpenRouter models that label speakers | a labeling transcriber | [Speakers and voices](#speakers-and-voices) |
 | **Evidence-only names** | A name is kept only if a quote proves it; otherwise `Unknown 1..N` | nothing | [Speakers and voices](#speakers-and-voices) |
 | **Voice recognition** | Enrolled voices recognised on any provider, in your browser | a 49 MB model, downloaded once | [Speakers and voices](#speakers-and-voices) |
@@ -272,7 +272,7 @@ npm run device-token   # creates the token and prints the Client ID, secret and 
 
 Uploads from a device app may carry `created_at` (when it was actually captured; ignored unless after 2020 and not in the future) and `ingest_id` (the app's own id for the recording: a repeat returns the existing row instead of creating a copy).
 
-On a phone-width screen the web app shows a small bottom bar: **Home, Ask, Record, Recordings, Settings**. The Record button is hidden if you never record in the app.
+On a phone-width screen the web app shows a small bottom bar: **Home, Ask, Record, Library, Settings**. The Record button is hidden if you never record in the app. See [The interface](#the-interface) for what each one shows.
 
 ### Background sync, Pocket and Omi
 
@@ -304,7 +304,7 @@ npm run dev
 - **Import from Omi** pulls your Omi conversations (also what a Limitless pendant paired with the Omi app produces) as transcripts, with no audio, and Attest summarizes them. See [Choosing your devices](#choosing-your-devices).
 - **Bluetooth pendant**: the Attest app for Mac or iPhone copies audio straight off a Limitless pendant and uploads it as a normal recording. See [apple/README.md](apple/README.md).
 
-Processing happens in your browser tab: transcribe, match voices, then summarize. Leave the tab open until it finishes. If anything fails, press **Retry**: a failed summary resumes from the saved transcript instead of paying for transcription twice.
+Processing happens in your browser tab: transcribe, match voices, then summarize. Leave the tab open until it finishes. If anything fails, press **Retry** (on the recording, or on its card in the list): a failed summary resumes from the saved transcript instead of paying for transcription twice.
 
 ### Speakers and voices
 
@@ -341,10 +341,12 @@ Speech models invent text over silence and room noise: "Thank you." repeated doz
 ### The interface
 
 - **Command palette.** Press **Cmd/Ctrl+K** (or click the search button in the header) from anywhere: type a question and press Enter to ask Attest, or jump to Today, Ask & chats, Settings, any recording, or one of the ten prompts. The **Deep reasoning** chip changes how the question is asked; hover it for what it means.
-- **On a phone** (under 760 px wide, or inside the Attest app) the sidebar becomes a small bottom bar: **Home** (Today), **Ask**, a raised **Record** button, **Recordings** (the list, import buttons and recorder), and **Settings**. Opening a recording shows it full screen. People rows wrap so names and the Rename and Merge controls fit.
+- **On a phone** (under 768 px wide, or inside the Attest app) the sidebar becomes a small bottom bar: **Home** (Today), **Ask**, a raised **Record** button, **Library** (the recordings list), and **Settings**. The header shrinks to the logo, a search button and your avatar, and the [area filter](#areas-work-personal-health-learning) gets its own row under it. **Record** opens its own screen: one big button, a large timer, the live transcript, and Upload and Import underneath. When a recording or upload finishes it opens full screen, with a short "Saved" note. The screen is kept awake while you record, where the browser allows it. People rows wrap so names and the Rename and Merge controls fit.
+- **In the iPhone app** you can also pull down on Home to refresh it, and you get small haptic taps (checking off a to-do, starting and stopping a recording, switching tabs). If the server cannot be reached, the app says so and offers **Try again** or **Change server**, instead of showing a blank screen. Text follows the iPhone's text size (Settings > Display & Brightness > Text Size).
+- **Asking before anything is lost.** Deleting a recording or chat, joining, splitting, undoing, clearing speaker names, merging people and forgetting a voice or fact each ask first, with a sheet that names the action (red when it destroys something). On a phone it is a bottom sheet; on desktop a centred dialog.
 - **Speaking as.** The chip at the top right is you. Pick yourself from the people Attest knows, or type a name.
-- **Area filter.** The dropdown beside it limits everything to one [area](#areas-work-personal-health-learning), or shows **All areas**.
-- **Sidebar.** Recordings are grouped Today, Yesterday, Last 7 days and Earlier, each with its duration, who spoke, and a Ready / Processing / Failed status. **Record** pulses (and follows your mic level) while recording. The transcription and summary models sit in a collapsible "Recording options" row, shown as friendly names ("GPT-OSS 20B", "MAI Transcribe 2") with the exact model id in the tooltip.
+- **Area filter.** The dropdown beside it (on a phone, the row under the header) limits everything to one [area](#areas-work-personal-health-learning), or shows **All areas**.
+- **Sidebar.** Recordings are grouped Today, Yesterday, Last 7 days and Earlier, each with its duration, who spoke, and a Ready / Processing / Failed status. A failed recording shows why and has its own **Retry** button. **Right-click** a recording (or **long-press** it on a touch screen) for Open, Retry, Move to area, Export and Delete; on a touch screen, **swipe left** to delete. **Record** pulses (and follows your mic level) while recording. The transcription and summary models sit in a collapsible "Recording options" row, shown as friendly names ("GPT-OSS 20B", "MAI Transcribe 2") with the exact model id in the tooltip.
 - **Audio player.** Play and pause, back and forward 15 seconds, 1x / 1.25x / 1.5x / 2x speed, and a seek bar that shows what has loaded and previews the time as you hover. The server answers HTTP range requests, so jumping anywhere does not download the whole file first.
 - **Transcript.** A conversation: avatar, name and a timestamp chip on the left, what they said on the right. Click a timestamp to play from there; the line being spoken highlights as audio plays (turn **Follow audio** off to stop it scrolling). Search highlights matches live, and **Only matches** hides the rest. Recordings without speaker timing show plain text.
 - **Notes.** Briefs and summaries with headings split into collapsible, icon-tagged sections (commitments, dependencies, decisions and so on). Action items show an owner tag and a due-date tag (red once overdue), and a finished item stays readable.
@@ -398,11 +400,12 @@ Today is the home screen, and it is built around one question: **what do I need 
 
 - **Your brief comes first.** It fills the main part of the screen, ready when you open Attest. It is written like a chief of staff would hand it to you: the **three things to do first** and why they are urgent now, what is **due or overdue**, what **other people owe you** (with a one-line nudge you could send), **decisions that are stuck**, **people to follow up with**, and **what changed since yesterday**. It leans on the last two days, leaves out any section with nothing real in it, and says where each point came from.
 - **Numbers at a glance.** Above the brief, small chips show how many things are overdue, due today, due this week, slipping, or waiting on others.
-- **Needs you.** Beside the brief (below it on a narrow screen) your open to-dos are sorted by *when* they matter: **Overdue**, **Due today**, **This week**, **Slipping** (open a week or more with no date), **Open**, **Later**, and **Waiting on others**. If you have set **Speaking as**, other people's to-dos move to "Waiting on others" instead of cluttering yours, and **Mine / Everyone** switches the view. Tick a to-do when it is done.
+- **Needs you.** Beside the brief (right under it on a phone) your open to-dos are sorted by *when* they matter: **Overdue**, **Due today**, **This week**, **Slipping** (open a week or more with no date), **Open**, **Later**, and **Waiting on others**. If you have set **Speaking as**, other people's to-dos move to "Waiting on others" instead of cluttering yours, and **Mine / Everyone** switches the view. Tick a to-do when it is done.
 - **The brief and the list agree.** The brief is written from the same sorted list you see on screen, so it never calls something overdue that the list does not, or the other way round.
-- **Weekly review.** Themes, decisions, open questions and one thing to focus on, once a week.
+- **Weekly review.** Themes, decisions, open questions and one thing to focus on, once a week. On a phone it stays folded except on Friday.
 - **Hide what you have handled.** Each bullet in the brief has a **✓**. Click it and the item disappears, along with reworded repeats, and the next brief is told not to bring it up again. After 7 days it can come back if it is still true. **Show all** brings everything back at once.
-- **Turn it off.** Untick *Write briefs automatically* if you would rather write them yourself with **Refresh**. Each brief is one small request to your AI provider, and it is only rewritten after a newer recording arrives.
+- **Check things off.** Ticking a to-do shows **Marked done · Undo** for a few seconds.
+- **Turn it off.** Open **What runs on its own** at the bottom of Today and untick *Write briefs automatically* if you would rather write them yourself with **Refresh**. Each brief is one small request to your AI provider, and it is only rewritten after a newer recording arrives.
 
 **Prefilled prompts** (click a chip, edit the text, press Run). Pick a person and a time window (1 to 60 days) first where it applies:
 
@@ -594,7 +597,7 @@ npm run local            # http://localhost:8787
 
 ## Settings
 
-Click the **gear icon in the top right** to change things without redeploying: switch between **OpenAI** and **OpenRouter**, tick which chat and transcription models to offer (with prices shown), pick the default model, add any other model id, replace the API key, add or remove your **Pocket** and **Omi** API key (write-only, like the others), and turn **voice recognition** on or off. (Who "I" and "me" mean is the **Speaking as** chip in the header, not in Settings.) **Save** applies the provider and model changes immediately.
+Click the **gear icon in the top right** (the **Settings** tab on a phone) to change things without redeploying. The dialog is grouped into folding sections (Models, Voice recognition, Transcription, Devices, API key), and closing it with unsaved edits asks first. Inside the iPhone or Mac app it starts with a **Server** row (the address you are connected to, with **Pendant sync** and **Change server**) and a **Lock Attest** switch, which asks for Face ID, Touch ID or your passcode when the app opens. You can switch between **OpenAI** and **OpenRouter**, tick which chat and transcription models to offer (with prices shown), pick the default model, add any other model id, replace the API key, add or remove your **Pocket** and **Omi** API key (write-only, like the others), and turn **voice recognition** on or off. (Who "I" and "me" mean is the **Speaking as** chip in the header, not in Settings.) **Save** applies the provider and model changes immediately.
 
 - Saved settings live in the D1 `settings` table and override the same names set at deploy time. Switching to OpenAI clears the OpenRouter values.
 - API keys are write-only: stored in your database, never sent back to the browser (the dialog only says whether one is set). Anyone who can read your D1 database can read them, the same trust level as your Worker secrets.
@@ -780,12 +783,13 @@ scripts/local-setup.mjs, local-check.mjs, lib/omlx.mjs   local setup and the cap
 
 ### Tests
 
-`npm test` runs `node --test "test/*.test.mjs"` (276 tests, no network; the quoted glob is expanded by Node itself, so it works the same in cmd, PowerShell and sh, and needs Node 21 or newer):
+`npm test` runs `node --test "test/*.test.mjs"` (345 tests, no network; the quoted glob is expanded by Node itself, so it works the same in cmd, PowerShell and sh, and needs Node 21 or newer):
 
 - `unit.test.mjs`: pure helpers: diarization merge, FTS query, export shaping, prompts, the speaker evidence filter, the voice matcher, fact validation, chunking, open-items and talk-balance logic.
 - `routes.test.mjs`: the router against a fake D1 and R2 that derives owner scoping from the bound SQL: dispatch order, owner isolation, the live and recover lifecycle, Today and brief caching, facts, the scheduled run, and the semantic path with a fake Workers AI and Vectorize.
 - `schema.test.mjs`: every migration against real SQLite.
 - `frontend.test.mjs`: imports every `public/app/*.js` module with a stubbed DOM, boots the app, and checks escaping and the markdown renderer.
+- `haptic.test.mjs`: the haptic helper is a no-op in a plain browser and posts the right message to the native app.
 - `local.test.mjs` and `local-scripts.test.mjs`: tolerant JSON, the local embedding and vector backends on real SQLite, and the setup and doctor scripts against a mock oMLX server.
 - `platform.test.mjs`: the Windows/Linux differences in the setup scripts (entry-point detection, launching `npx` on Windows, ports and model recommendations per platform), checked for every platform on any OS.
 - `zip.test.mjs` and `docx.test.mjs`: archive structure, verified with `unzip -t` and Python's `zipfile` when available.
