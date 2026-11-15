@@ -437,3 +437,22 @@ dialog[open] { animation:pop-in .16s ease-out }
 .cs-actions button { min-height:44px; font-size:16px }
 button.danger { background:var(--danger, #ef4444); border-color:transparent; color:#fff; font-weight:600 }
 @media (min-width:768px) { .cs-actions { flex-direction:row-reverse } .cs-actions button { flex:1 } }
+
+/* ---------- toast (app/toast.js) ---------- */
+.toast { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(24px + var(--safe-b)); z-index:60; display:flex; align-items:center; gap:14px; max-width:min(92vw, 460px); padding:10px 12px 10px 16px; background:var(--bg-elevated); border:1px solid var(--border-strong); border-radius:12px; box-shadow:var(--shadow); font-size:14px; animation:pop-in .16s ease-out }
+.toast button { min-height:32px; flex:none }
+@media (max-width:767px) { .toast { bottom:calc(72px + var(--safe-b)) } }
+
+/* ---------- Today on a phone: what needs you comes right after the brief ---------- */
+.skel { display:flex; flex-direction:column; gap:10px; padding:4px 0 }
+.skel i { display:block; height:12px; border-radius:6px; background:linear-gradient(90deg, var(--bg-elevated) 25%, var(--border-subtle) 50%, var(--bg-elevated) 75%); background-size:200% 100%; animation:shimmer 1.4s linear infinite }
+.skel i:nth-child(2) { width:92% } .skel i:nth-child(3) { width:76% } .skel i:nth-child(4) { width:55% }
+@keyframes shimmer { from { background-position:200% 0 } to { background-position:-200% 0 } }
+@media (max-width:767px) {
+  .today-grid { display:flex; flex-direction:column; align-items:stretch; gap:20px }
+  .today-main { display:contents }
+  .t-brief { order:1 } .today-side { order:2 } .t-ask { order:3 }
+  .brief-hero { padding:16px }
+  .task { min-height:44px; align-items:center }
+  .task input[type=checkbox] { width:24px; height:24px; margin:0 }
+}

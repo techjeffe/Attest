@@ -15,6 +15,7 @@ import { startChat } from './chats.js';
 import { icon } from './icons.js';
 import { noteHtml } from './recordings.js';
 import { haptic } from './haptic.js';
+import { toast } from './toast.js';
 
 let acks = new Set(); // brief items the owner has acknowledged (hidden), keyed by normalized text
 let token = 0; // bumps on every showToday(), so a slow response cannot paint over a newer screen
@@ -120,6 +121,7 @@ function wireAcks(id) {
 }
 
 function briefHtml(b, emptyMsg) {
+  if (!b && emptyMsg === 'Generating…') return '<div class="skel" aria-busy="true"><span class="sr-only">Generating…</span><i></i><i></i><i></i><i></i></div>';
   if (!b) return `<div class="muted">${esc(emptyMsg)}</div>`;
   return `${noteHtml(b.content)}
     <div class="muted" style="margin-top:12px">${b.empty ? '' : 'Generated ' + new Date(b.created_at).toLocaleString()}</div>`;
@@ -147,6 +149,8 @@ export async function showToday(opts) {
 
   acks = new Set(d.acks || []);
   openData = d.open;
+  // The weekly review is long: on a phone it stays folded except on Friday, when it is the point.
+  const weeklyOpen = !window.matchMedia?.('(max-width:767px)').matches || new Date().getDay() === 5;
   const me = getMe();
   const mineCount = me ? d.open.filter((x) => isMe(x.owner, me)).length : 0;
   if (!store.get('items')) store.set('items', me && mineCount ? 'mine' : 'all');
@@ -154,20 +158,22 @@ export async function showToday(opts) {
   $('main').innerHTML = `
     <div class="row" style="justify-content:space-between;align-items:flex-end">
       <h2 style="margin:0">Today <span class="muted">${esc(new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }))}</span></h2>
-      <label class="muted" style="display:flex;align-items:center;gap:6px" title="Write today's brief and the weekly review automatically when you open Attest. Each costs one small model call.">
-        <input type="checkbox" id="auto-on" ${autoOn() ? 'checked' : ''}> Write briefs automatically</label>
     </div>
     ${d.has_recordings ? '' : '<div class="empty">Record or upload something and your day will start to fill in here.</div>'}
     <div class="today-grid">
       <div class="today-main">
+        <div class="t-brief">
         <div class="row" style="justify-content:space-between;align-items:center"><h3 style="margin:0">Today's brief</h3><button id="brief-refresh" class="small">Refresh</button></div>
         <div id="today-stats" class="stats"></div>
         <div class="card-box brief-hero" id="brief-card">${briefHtml(d.brief, d.has_recordings ? 'Generating…' : 'Nothing to brief yet.')}</div>
+        </div>
+        <div class="t-ask">
         ${omnibarHtml(d.people)}
-        <details style="margin-top:20px" ${d.weekly ? 'open' : ''}><summary><b>Weekly review</b> <span class="muted">(week of ${esc(d.week_start)})</span></summary>
+        <details style="margin-top:20px" ${d.weekly && weeklyOpen ? 'open' : ''}><summary><b>Weekly review</b> <span class="muted">(week of ${esc(d.week_start)})</span></summary>
           <div class="card-box brief-hero" id="weekly-card" style="margin-top:8px">${briefHtml(d.weekly, d.has_recordings ? 'Generating…' : 'Nothing to review yet.')}</div>
           <button id="weekly-refresh" class="small" style="margin-top:6px">Refresh</button>
         </details>
+        </div>
       </div>
       <div class="today-side">
         <div class="row" style="justify-content:space-between;align-items:flex-end">
@@ -196,7 +202,9 @@ export async function showToday(opts) {
       <select id="mem-person"><option value="">Anyone</option></select>
       <button id="mem-build" class="small" hidden></button></div>
     <div id="mem-list" class="list"></div>
-    <details style="margin-top:22px"><summary class="muted">What runs on its own</summary><ul class="muted">${autoNotes}</ul></details>`;
+    <details style="margin-top:22px"><summary class="muted">What runs on its own</summary>
+      <label class="row" style="gap:8px;margin:10px 0" title="Write today's brief and the weekly review automatically when you open Attest. Each costs one small model call."><input type="checkbox" id="auto-on" ${autoOn() ? 'checked' : ''}> Write briefs automatically</label>
+      <ul class="muted">${autoNotes}</ul></details>`;
 
   wire(d, mine, date);
   for (const id of ['brief-card', 'weekly-card']) { wireAcks(id); decorateBrief(id); }
@@ -280,14 +288,19 @@ function wire(d, mine, date) {
     const box = e.target.closest('input[type=checkbox]');
     if (!box) return;
     const row = box.closest('.task');
-    try {
+    const setDone = async (done) => {
       await api(`/recordings/${row.dataset.rec}/actions`, {
         method: 'PATCH', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ i: Number(row.dataset.i), task: row.dataset.task, done: box.checked }),
+        body: JSON.stringify({ i: Number(row.dataset.i), task: row.dataset.task, done }),
       });
-      row.classList.toggle('done', box.checked);
-      haptic(box.checked ? 'success' : 'light');
+      box.checked = done;
+      row.classList.toggle('done', done);
       loadBadge();
+    };
+    try {
+      await setDone(box.checked);
+      haptic(box.checked ? 'success' : 'light');
+      if (box.checked) toast('Marked done', { action: 'Undo', onAction: () => setDone(false).catch((err) => alert(err.message)) });
     } catch (err) {
       box.checked = !box.checked;
       // the list changed underneath this page (a recording was re-summarized): show the current one
@@ -334,7 +347,7 @@ async function runPrompt(date, mine) {
 async function generate(kind, date, mine, force = false) {
   const card = $(kind === 'today' ? 'brief-card' : 'weekly-card');
   if (!card) return;
-  card.innerHTML = '<div class="muted">Generating…</div>';
+  card.innerHTML = briefHtml(null, 'Generating…');
   try {
     const b = await post('/today/brief', { kind, date, area: getArea() || undefined, me: getMe(), force });
     if (mine === token) { card.innerHTML = briefHtml(b, 'Nothing to show.'); decorateBrief(card.id || (kind === 'today' ? 'brief-card' : 'weekly-card')); }
