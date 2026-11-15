@@ -34,6 +34,8 @@ public enum Multipart {
         field("duration_ms", String(item.durationMs))
         field("created_at", String(item.createdAtMs))
         field("ingest_id", item.ingestId)
+        // Minutes east of UTC where the recording was made, so "tomorrow" in it resolves on the speaker's calendar.
+        field("tz_offset", String(TimeZone.current.secondsFromGMT(for: Date(timeIntervalSince1970: Double(item.createdAtMs) / 1000)) / 60))
         body.append("--\(boundary)\r\nContent-Disposition: form-data; name=\"file\"; filename=\"\(item.fileName)\"\r\nContent-Type: audio/webm\r\n\r\n".data(using: .utf8)!)
         body.append(audio)
         body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)

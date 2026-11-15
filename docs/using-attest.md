@@ -61,7 +61,7 @@ Speech models invent text over silence and room noise: "Thank you." repeated doz
 - **Sidebar.** Recordings are grouped Today, Yesterday, Last 7 days and Earlier, each with its duration, who spoke, and a Ready / Processing / Failed status. A failed recording shows why and has its own **Retry** button. **Right-click** a recording (or **long-press** it on a touch screen) for Open, Retry, Move to area, Export and Delete; on a touch screen, **swipe left** to delete. **Record** pulses (and follows your mic level) while recording. The transcription and summary models sit in a collapsible "Recording options" row, shown as friendly names ("GPT-OSS 20B", "MAI Transcribe 2") with the exact model id in the tooltip.
 - **Audio player.** Play and pause, back and forward 15 seconds, 1x / 1.25x / 1.5x / 2x speed, and a seek bar that shows what has loaded and previews the time as you hover. The server answers HTTP range requests, so jumping anywhere does not download the whole file first.
 - **Transcript.** A conversation: avatar, name and a timestamp chip on the left, what they said on the right. Click a timestamp to play from there; the line being spoken highlights as audio plays (turn **Follow audio** off to stop it scrolling). Search highlights matches live, and **Only matches** hides the rest. Recordings without speaker timing show plain text.
-- **Notes.** Briefs and summaries with headings split into collapsible, icon-tagged sections (commitments, dependencies, decisions and so on). Action items show an owner tag and a due-date tag (red once overdue), and a finished item stays readable.
+- **Notes.** Briefs and summaries with headings split into collapsible, icon-tagged sections (commitments, dependencies, decisions and so on). Action items show an owner tag and a due-date tag (red once overdue), and a finished item stays readable. See [What counts as an action item](#what-counts-as-an-action-item).
 - **Talk balance.** One split bar for the whole conversation, then each speaker's share, turns, questions, longest turn and cut-ins.
 
 ### Areas: work, personal, health, learning
@@ -75,7 +75,7 @@ Every recording belongs to one of four areas, so your work life and your home li
 
 <details><summary>For tinkerers</summary>
 
-`GET /api/recordings`, `/api/today`, `/api/memory`, `/api/people` and `/api/export` take `?area=work|personal|health|learning`; `POST /api/ask`, `/api/chats/:id/messages`, `/api/today/brief` and `/api/insight` take `area` in the body. A missing or unknown value means all areas. Uploads and `POST /api/recordings/live` accept an `area` field. `PATCH /api/recordings/:id/area {"area": "health"}` sets one (`"auto"` hands it back). `POST /api/recordings/areas/backfill` re-derives every automatic area of older recordings from their summary style once, leaving your own choices alone.
+`GET /api/recordings`, `/api/today`, `/api/memory`, `/api/people` and `/api/export` take `?area=work|personal|health|learning`; `POST /api/ask`, `/api/chats/:id/messages`, `/api/today/brief` and `/api/insight` take `area` in the body. A missing or unknown value means all areas. Uploads and `POST /api/recordings/live` accept an `area` field. They also take the speaker's timezone as minutes east of UTC (`tz_offset`: a form field on uploads, a body field on live start, or an `x-tz-offset` header on any call), used to resolve "tomorrow" and "by Friday" in action items. The web app and the iOS and Android apps send it for you. `PATCH /api/recordings/:id/area {"area": "health"}` sets one (`"auto"` hands it back). `POST /api/recordings/areas/backfill` re-derives every automatic area of older recordings from their summary style once, leaving your own choices alone.
 </details>
 
 ### Conversation shaping: one recording, one conversation
@@ -106,13 +106,25 @@ Optional settings (Worker variables): `SPLIT_GAP_MIN` (default 5 minutes), `TRIM
 - Every recording also gets **unanswered questions** (asked but never clearly answered) and a **talk balance** table: each speaker's share of talk time, turns, questions, longest turn and cut-ins, measured from the stored turns.
 - Action items have **checkboxes that are saved**, and a re-summarize keeps your ticks.
 
+### What counts as an action item
+
+Summaries list only **pending commitments and explicit reminders**, never a recap of what was discussed, a hypothetical ("we could maybe look at..."), or something already done. Each item is:
+
+- **A task that starts with a verb**: "Send the deck to Ben", not "Deck".
+- **Owned.** The speaker who promised it, or the person who was asked and agreed. Someone who is not named is left blank (the item is kept, not dropped). With **Speaking as** set, your items are yours and everyone else's go under **Waiting on others**.
+- **Dated only when a date was said.** "By Tuesday", "tomorrow" and "next week" are turned into real dates using the day the recording was made, on the clock where you were (the web and phone apps send your timezone; imports with no timezone count as UTC). If no date was said the item has none, and Attest never guesses one. The words you actually said ("before the client call") still show on the item.
+- **Soft or firm.** "I'll try", "maybe I'll", "if there's time" are marked **tentative**. They are not hidden: they sit, dimmed, under **Maybe / soft commitments** after your firm to-dos, and they never nag as *slipping*.
+- **Backed by a quote.** Hover an item on Today to see the words from the transcript it came from.
+
+Recordings made before this change keep their old items; **Re-summarize** one to get the new fields.
+
 ### The Today screen
 
 Today is the home screen, and it is built around one question: **what do I need to do today?**
 
 - **Your brief comes first.** It fills the main part of the screen, ready when you open Attest. It is written like a chief of staff would hand it to you: the **three things to do first** and why they are urgent now, what is **due or overdue**, what **other people owe you** (with a one-line nudge you could send), **decisions that are stuck**, **people to follow up with**, and **what changed since yesterday**. It leans on the last two days, leaves out any section with nothing real in it, and says where each point came from.
 - **Numbers at a glance.** Above the brief, small chips show how many things are overdue, due today, due this week, slipping, or waiting on others.
-- **Needs you.** Beside the brief (right under it on a phone) your open to-dos are sorted by *when* they matter: **Overdue**, **Due today**, **This week**, **Slipping** (open a week or more with no date), **Open**, **Later**, and **Waiting on others**. If you have set **Speaking as**, other people's to-dos move to "Waiting on others" instead of cluttering yours, and **Mine / Everyone** switches the view. Tick a to-do when it is done.
+- **Needs you.** Beside the brief (right under it on a phone) your open to-dos are sorted by *when* they matter: **Overdue**, **Due today**, **This week**, **Slipping** (open a week or more with no date), **Open**, **Later**, **Maybe / soft commitments**, and **Waiting on others**. If you have set **Speaking as**, other people's to-dos move to "Waiting on others" instead of cluttering yours, and **Mine / Everyone** switches the view. Tick a to-do when it is done.
 - **The brief and the list agree.** The brief is written from the same sorted list you see on screen, so it never calls something overdue that the list does not, or the other way round.
 - **Weekly review.** Themes, decisions, open questions and one thing to focus on, once a week. On a phone it stays folded except on Friday.
 - **Hide what you have handled.** Each bullet in the brief has a **✓**. Click it and the item disappears, along with reworded repeats, and the next brief is told not to bring it up again. After 7 days it can come back if it is still true. **Show all** brings everything back at once.

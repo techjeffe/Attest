@@ -4,10 +4,11 @@ import { llmFetch, sttFetch, sttUrl, withRateLimitRetry } from '../llm.js';
 import { sttDiarizes, openRouterSegments, localSegments, usesOpenRouterStt } from '../stt.js';
 import { jsonAudioBody, base64Length, withLength } from '../stream.js';
 import { MAX_UPLOAD, MIN_SEGMENTS_FOR_TURNS, contextChars, localDiarize, maxUpload, modelById, transcriberById, previewTranscriber, defaultModel, effectiveTranscriber } from '../config.js';
-import { json, fail, uid, ownerOf } from '../http.js';
+import { tzOffset, json, fail, uid, ownerOf } from '../http.js';
 import { readRow, resolveTemplate } from '../db.js';
 import { diarizeToText, parseJsonLoose, safeParse, STALE_PROCESSING_MS } from '../text.js';
 import { buildSystemPrompt } from '../prompts.js';
+import { normalizeActionItems } from '../insights.js';
 import { guardOn, cleanText, cleanSegments } from '../hallucination.js';
 import { nameSpeakers, rebuildTranscript, anonymousSpeakers, reassignSegments } from '../speakers.js';
 import { selectVoiceprints, speakerRefsForm, matchedSpeakerRefs, normalizeEmbedding, matchVoices, applyVoiceMatches } from '../voiceprints.js';
@@ -54,8 +55,8 @@ export async function upload(request, env, owner = ownerOf(request)) {
   const { area, area_source } = initialArea(form.get('area'), resolvedTemplate ? templateKey : 'meeting');
   const ins = await env.DB.prepare(
     `INSERT OR IGNORE INTO recordings (id, owner, title, created_at, duration_ms, r2_key, content_type,
-                             status, template, model, transcriber, ingest_id, area, area_source, src)
-     VALUES (?,?,?,?,?,?,?,'uploaded',?,?,?,?,?,?,?)`
+                             status, template, model, transcriber, ingest_id, area, area_source, src, tz_offset)
+     VALUES (?,?,?,?,?,?,?,'uploaded',?,?,?,?,?,?,?,?)`
   ).bind(
     id, owner,
     String(form.get('title') || '').trim() || 'Untitled recording',
@@ -66,6 +67,7 @@ export async function upload(request, env, owner = ownerOf(request)) {
     modelById(form.get('model'), env)?.id || null,
     transcriberById(form.get('transcriber'), env).id,
     ingestId, area, area_source, ingestId ? 'device' : null,
+    tzOffset(form.get('tz_offset')) ?? tzOffset(request.headers.get('x-tz-offset')),
   ).run();
   if (ins?.meta?.changes === 0) { // two retries raced: keep the first, drop this audio
     await env.AUDIO.delete(key);
@@ -93,8 +95,8 @@ export async function liveStart(request, env, owner) {
   const { area, area_source } = initialArea(body.area, resolvedTemplate ? templateKey : 'meeting');
   await env.DB.prepare(
     `INSERT INTO recordings (id, owner, title, created_at, r2_key, content_type,
-                             status, template, model, transcriber, live_transcript, status_at, area, area_source)
-     VALUES (?,?,?,?,?,?,'recording',?,?,?,'',?,?,?)`
+                             status, template, model, transcriber, live_transcript, status_at, area, area_source, tz_offset)
+     VALUES (?,?,?,?,?,?,'recording',?,?,?,'',?,?,?,?)`
   ).bind(
     id, owner,
     String(body.title || '').trim() || 'Untitled recording',
@@ -104,6 +106,7 @@ export async function liveStart(request, env, owner) {
     modelById(body.model, env)?.id || null,
     transcriberById(body.transcriber, env).id,
     Date.now(), area, area_source,
+    tzOffset(body.tz_offset) ?? tzOffset(request.headers.get('x-tz-offset')),
   ).run();
   return json({ id });
 }
@@ -474,11 +477,13 @@ export async function process(env, id, owner, { stopAfter, force } = {}) {
 // totals instead of replacing them.
 async function summarize(env, rec, id, owner, { transcript, accumulate, tokensIn = 0, tokensOut = 0 }) {
   const tmpl = await resolveTemplate(env, owner, rec.template);
+  // The speaker's own clock: "tomorrow" means their tomorrow. Unknown offset = UTC.
+  const localMs = rec.created_at + (tzOffset(rec.tz_offset) || 0) * 60000;
   const sr = await llmFetch(env, {
     model: rec.model || defaultModel(env),
     response_format: { type: 'json_object' },
     messages: [
-      { role: 'system', content: buildSystemPrompt(tmpl) },
+      { role: 'system', content: buildSystemPrompt(tmpl, localMs) },
       { role: 'user', content: `Transcript:\n\n${transcript.slice(0, contextChars(env))}` },
     ],
   });
@@ -492,8 +497,8 @@ async function summarize(env, rec, id, owner, { transcript, accumulate, tokensIn
   // Items the user already ticked stay ticked when the same task comes back (re-summarize).
   const doneTasks = new Set((Array.isArray(rec.action_items) ? rec.action_items : [])
     .filter((a) => a?.done && a.task).map((a) => String(a.task).trim().toLowerCase()));
-  const items = (Array.isArray(sj.action_items) ? sj.action_items : []).filter((a) => a && typeof a === 'object')
-    .map((a) => (doneTasks.has(String(a.task || '').trim().toLowerCase()) ? { ...a, done: true } : a));
+  const items = normalizeActionItems(sj.action_items, localMs)
+    .map((a) => (doneTasks.has(a.task.toLowerCase()) ? { ...a, done: true } : a));
   const unanswered = (Array.isArray(sj.unanswered) ? sj.unanswered : [])
     .map((q) => String(q || '').trim()).filter(Boolean).slice(0, 10);
 

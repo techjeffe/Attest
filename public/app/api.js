@@ -2,7 +2,9 @@
 // message is the server's {error} string (or the raw body for non-JSON responses).
 
 export const api = async (path, opts) => {
-  const r = await fetch('/api' + path, opts);
+  // Tell the server which clock this is, so "tomorrow" in a recording means the speaker's tomorrow.
+  const tz = String(-new Date().getTimezoneOffset());
+  const r = await fetch('/api' + path, { ...opts, headers: { ...opts?.headers, 'x-tz-offset': tz } });
   const ct = r.headers.get('content-type') || '';
   if (!r.ok) {
     if (ct.includes('json')) throw new Error((await r.json()).error);

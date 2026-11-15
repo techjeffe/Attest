@@ -30,6 +30,8 @@ object Multipart {
         field("title", item.title)
         if (item.durationMs > 0) field("duration_ms", item.durationMs.toString())
         field("created_at", item.createdAtMs.toString())
+        // Minutes east of UTC where the recording was made, so "tomorrow" in it resolves on the speaker's calendar.
+        field("tz_offset", (java.util.TimeZone.getDefault().getOffset(item.createdAtMs) / 60000).toString())
         append("--$boundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"${quoteSafe(item.fileName)}\"\r\n")
         append("Content-Type: ${item.mimeType}\r\n\r\n")
     }.toByteArray(Charsets.UTF_8)

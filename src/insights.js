@@ -25,10 +25,35 @@ export function weekStart(date) {
 
 const dayNumber = (ms) => Math.floor(ms / DAY);
 
+// What the model returned for action_items -> clean stored items. Drops entries with no task,
+// keeps `due` only when it is a real ISO date that is not in the past of the recording (a model
+// that mis-resolved "Tuesday" must not make a fresh item overdue), and keeps the spoken phrase in
+// `when` either way. Old items (no when/tentative/evidence) stay valid.
+export function normalizeActionItems(raw, recordedAt) {
+  const rec = Number.isFinite(recordedAt) ? new Date(recordedAt).toISOString().slice(0, 10) : null;
+  const floor = rec ? new Date(Date.parse(`${rec}T00:00:00Z`) - DAY).toISOString().slice(0, 10) : null;
+  const str = (v, n) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, n) : null);
+  const out = [];
+  for (const a of Array.isArray(raw) ? raw : []) {
+    const task = a && typeof a === 'object' ? str(a.task, 300) : null;
+    if (!task || out.some((x) => x.task.toLowerCase() === task.toLowerCase())) continue;
+    let due = str(a.due, 40), when = str(a.when, 120);
+    const iso = due && validDate(due.slice(0, 10)) && DATE_RE.test(due) ? due : null;
+    if (due && !iso) when = when || due;
+    due = iso && (!floor || iso >= floor) ? iso : null;
+    out.push({
+      task, owner: str(a.owner, 80), due, when,
+      tentative: a.tentative === true, evidence: str(a.evidence, 300),
+    });
+  }
+  return out;
+}
+
 // Open (not done) action items across recordings, oldest problems first.
 //  overdue:  the due text is an ISO date that has passed
 //  slipping: not overdue, but the recording is SLIPPING_DAYS+ days old and the item has no
-//            future ISO due date -- it has been sitting open
+//            future ISO due date -- it has been sitting open. A tentative ("I'll try") item
+//            never nags as slipping; it waits in its own "Maybe" bucket.
 // Free-text dues ("Friday") cannot be judged reliably, so they only ever count as slipping.
 // rows: [{id, title, created_at, action_items:[{task,owner,due,done}]}]. today: YYYY-MM-DD.
 export function openItems(rows, today) {
@@ -44,11 +69,12 @@ export function openItems(rows, today) {
       out.push({
         rec_id: r.id, title: r.title, created_at: r.created_at, i,
         task: String(a.task), owner: a.owner || null, due: a.due || null,
-        age_days: age, overdue, slipping: !overdue && !future && age >= SLIPPING_DAYS,
+        when: a.when || null, tentative: a.tentative === true, evidence: a.evidence || null,
+        age_days: age, overdue, slipping: !overdue && !future && !a.tentative && age >= SLIPPING_DAYS,
       });
     });
   }
-  const rank = (x) => (x.overdue ? 0 : x.slipping ? 1 : 2);
+  const rank = (x) => (x.overdue ? 0 : x.slipping ? 1 : x.tentative ? 3 : 2);
   return out.sort((a, b) => rank(a) - rank(b) || b.age_days - a.age_days);
 }
 
@@ -161,11 +187,12 @@ export function reminderBucket(item, today, isMine = true) {
     const days = Math.round((Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / DAY);
     return days <= 7 ? 'week' : 'later';
   }
+  if (item.tentative) return 'maybe';
   return item.slipping ? 'slipping' : 'open';
 }
 export const BUCKETS = [
   ['overdue', 'Overdue'], ['today', 'Due today'], ['week', 'This week'], ['slipping', 'Slipping'],
-  ['open', 'Open'], ['later', 'Later'], ['waiting', 'Waiting on others'],
+  ['open', 'Open'], ['later', 'Later'], ['maybe', 'Maybe / soft commitments'], ['waiting', 'Waiting on others'],
 ];
 
 // The facts the brief must start from, computed rather than left for the model to work out: what is
@@ -176,7 +203,7 @@ export function groundTruth(items, today, me, isMine) {
   const lines = {};
   for (const x of items) {
     const b = reminderBucket(x, today, mine(x));
-    (lines[b] ||= []).push(`- ${x.task}${x.owner ? ` (${x.owner})` : ''}${x.due ? ` due ${x.due}` : ''} [${x.title}, ${x.age_days}d ago]`);
+    (lines[b] ||= []).push(`- ${x.task}${x.owner ? ` (${x.owner})` : ''}${x.due ? ` due ${x.due}` : x.when ? ` (said "${x.when}")` : ''}${x.tentative ? ' [tentative]' : ''} [${x.title}, ${x.age_days}d ago]`);
   }
   const out = BUCKETS.filter(([k]) => lines[k]?.length)
     .map(([k, label]) => `${label} (${lines[k].length}):\n${lines[k].slice(0, 12).join('\n')}`);

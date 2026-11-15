@@ -23,7 +23,7 @@ export { deepResearch, mergeHits, excerpt, MAX_SUB_QUESTIONS, MAX_HITS, MAX_MODE
 /* --- /#3 deep research --- */
 export { listTemplates } from './routes/templates.js';
 
-export { validDate, weekStart, openItems, talkStats, involves, buildContext, insightSystem, AUTO_PROMPTS } from './insights.js';
+export { validDate, weekStart, openItems, normalizeActionItems, talkStats, involves, buildContext, insightSystem, AUTO_PROMPTS } from './insights.js';
 export { normalizeFacts, chunkText, buildChunks, FACT_KINDS } from './memory.js';
 export { chunksToHits, vectorsEnabled, ownerNamespace } from './vectors.js';
 export { suggestMerges, renameSpeaker, mergeAliases } from './people.js';

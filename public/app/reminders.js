@@ -5,7 +5,7 @@ const DAY = 86400000;
 
 export const BUCKETS = [
   ['overdue', 'Overdue'], ['today', 'Due today'], ['week', 'This week'], ['slipping', 'Slipping'],
-  ['open', 'Open'], ['later', 'Later'], ['waiting', 'Waiting on others'],
+  ['open', 'Open'], ['later', 'Later'], ['maybe', 'Maybe / soft commitments'], ['waiting', 'Waiting on others'],
 ];
 
 export function reminderBucket(item, today, isMine = true) {
@@ -17,6 +17,7 @@ export function reminderBucket(item, today, isMine = true) {
     const days = Math.round((Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / DAY);
     return days <= 7 ? 'week' : 'later';
   }
+  if (item.tentative) return 'maybe';
   return item.slipping ? 'slipping' : 'open';
 }
 

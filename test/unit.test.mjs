@@ -10,7 +10,7 @@ import {
   appendLive,
   encodeWav, pickClipWindow, wavDurationMs, matchedSpeakerRefs,
   normalizeEmbedding, matchVoices, applyVoiceMatches,
-  validDate, weekStart, openItems, talkStats, involves, buildContext,
+  validDate, weekStart, openItems, normalizeActionItems, talkStats, involves, buildContext,
   normalizeFacts, chunkText, buildChunks, chunksToHits, vectorsEnabled,
   suggestMerges, renameSpeaker, mergeAliases, reassignSegments,
 } from '../src/testing.js';
@@ -843,4 +843,43 @@ test('a placeholder name never shows up as a speaker: it becomes Unknown N', () 
   const segs = [{ speaker: 'A', text: 'hi' }, { speaker: 'B', text: 'yo' }, { speaker: 'C', text: 'hey' }];
   const out = applySpeakerNames(segs, [{ label: 'A', name: 'Speaker K' }, { label: 'B', name: 'Jeff' }, { label: 'C', name: 'Speaker 4' }]);
   assert.deepEqual(out.map((s) => s.speaker), ['Unknown 1', 'Jeff', 'Unknown 2']);
+});
+
+test('normalizeActionItems: keeps real ISO dues, keeps the spoken phrase, drops junk and repeats', () => {
+  const rec = Date.parse('2026-11-14T15:00:00Z');
+  const out = normalizeActionItems([
+    { task: 'Send the deck', owner: 'Ben', due: '2026-11-17', when: 'by Tuesday', tentative: false, evidence: 'I will send it by Tuesday' },
+    { task: 'send the deck', owner: 'Ben' },
+    { task: 'Call the vendor', due: 'Friday' },
+    { task: 'Book flights', due: '2026-10-01', tentative: true },
+    { owner: 'nobody' }, null, 'junk',
+  ], rec);
+  assert.deepEqual(out.map((x) => [x.task, x.due, x.when, x.tentative]), [
+    ['Send the deck', '2026-11-17', 'by Tuesday', false],
+    ['Call the vendor', null, 'Friday', false],
+    ['Book flights', null, null, true]]);
+  assert.deepEqual(normalizeActionItems('bad', rec), []);
+});
+
+test('buildSystemPrompt anchors dates and spells out the action item rules', () => {
+  const p = buildSystemPrompt(TEMPLATES.meeting, Date.parse('2026-11-14T15:00:00Z'));
+  assert.match(p, /recorded on 2026-11-14 \(Saturday\)/);
+  assert.match(p, /imperative verb/);
+  assert.match(p, /"tentative":false/);
+  assert.doesNotMatch(buildSystemPrompt(), /recorded on/);
+});
+
+test('openItems: a tentative item is never slipping and sorts last', () => {
+  const day = 86400000, now = Date.parse('2026-11-10T00:00:00Z');
+  const out = openItems([{ id: 'a', title: 'A', created_at: now - 20 * day, action_items: [
+    { task: 'maybe', tentative: true }, { task: 'firm' }] }], '2026-11-10');
+  assert.deepEqual(out.map((x) => [x.task, x.slipping]), [['firm', true], ['maybe', false]]);
+});
+
+test('tzOffset accepts only plausible minute offsets', async () => {
+  const { tzOffset } = await import('../src/http.js');
+  assert.equal(tzOffset('-480'), -480);
+  assert.equal(tzOffset(330), 330);
+  assert.equal(tzOffset('0'), 0);
+  for (const bad of [null, undefined, '', 'abc', '1.5', '9999', '-841']) assert.equal(tzOffset(bad), null);
 });

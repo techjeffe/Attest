@@ -917,10 +917,10 @@ test('reminders: the browser and the server put every open item in the same buck
   const today = '2026-11-11';
   const items = [
     { due: '2026-11-01', overdue: true }, { due: '2026-11-11' }, { due: '2026-11-15' }, { due: '2026-12-30' },
-    { due: null, slipping: true }, { due: null }, { due: 'Friday', slipping: true },
+    { due: null, slipping: true }, { due: null }, { due: 'Friday', slipping: true }, { due: null, tentative: true },
   ];
   for (const x of items) for (const mine of [true, false]) assert.equal(client.reminderBucket(x, today, mine), server.reminderBucket(x, today, mine));
-  assert.deepEqual(items.map((x) => client.reminderBucket(x, today)), ['overdue', 'today', 'week', 'later', 'slipping', 'open', 'slipping']);
+  assert.deepEqual(items.map((x) => client.reminderBucket(x, today)), ['overdue', 'today', 'week', 'later', 'slipping', 'open', 'slipping', 'maybe']);
   assert.deepEqual(client.BUCKETS, server.BUCKETS);
   const g = client.groupReminders([{ owner: 'Ben', due: null }, { owner: 'Jeff', due: '2026-11-11' }], today, (x) => x.owner === 'Jeff');
   assert.deepEqual([...g.keys()].sort(), ['today', 'waiting']);

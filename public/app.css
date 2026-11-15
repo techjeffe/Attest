@@ -424,6 +424,7 @@ dialog[open] { animation:pop-in .16s ease-out }
 .stat b { font-size:13.5px }
 .stat.bad { border-color:var(--bad); color:var(--bad) } .stat.warn { border-color:#d97706; color:#d97706 }
 .reminders .bucket { margin-top:14px } .reminders .bucket:first-child { margin-top:8px }
+.task.tentative { opacity:.7 }
 .bucket-h { font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); margin:0 0 4px; font-weight:600 }
 .bucket-overdue .bucket-h { color:var(--bad) } .bucket-today .bucket-h { color:#d97706 }
 .today-main .omnibar { margin-top:22px }

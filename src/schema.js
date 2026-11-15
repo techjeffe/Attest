@@ -94,6 +94,9 @@ export const MIGRATIONS = [
     'ALTER TABLE recordings ADD COLUMN lineage TEXT',
     'ALTER TABLE recordings ADD COLUMN src TEXT',
   ] },
+  // Where the recorder was: minutes east of UTC when it was captured, so "tomorrow" in a recording
+  // resolves against the speaker's calendar day, not the Worker's. Null = unknown (treated as UTC).
+  { id: 13, sql: ['ALTER TABLE recordings ADD COLUMN tz_offset INTEGER'] },
 ];
 
 // Applies every migration not yet recorded. `db` is a D1 binding (or anything with the

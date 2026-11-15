@@ -47,9 +47,10 @@ export async function loadBadge() {
 
 function itemRow(x) {
   const who = x.owner ? `<span class="tag who">${icon('user', 12)} ${esc(x.owner)}</span>` : '';
-  const due = x.due ? `<span class="tag due${x.overdue ? ' late' : ''}">${icon('calendar', 12)} ${esc(x.due)}${x.overdue ? ' · overdue' : ''}</span>` : '';
+  const due = x.due ? `<span class="tag due${x.overdue ? ' late' : ''}" title="${esc(x.when || '')}">${icon('calendar', 12)} ${esc(x.due)}${x.overdue ? ' · overdue' : ''}</span>`
+    : x.when ? `<span class="tag due" title="No exact date">${icon('calendar', 12)} ${esc(x.when)}</span>` : '';
   const age = x.slipping ? `<span class="tag age">open ${x.age_days}d</span>` : '';
-  return `<label class="task" data-rec="${esc(x.rec_id)}" data-i="${x.i}" data-task="${esc(x.task)}">
+  return `<label class="task${x.tentative ? ' tentative' : ''}"${x.evidence ? ` title="${esc('“' + x.evidence + '”')}"` : ''} data-rec="${esc(x.rec_id)}" data-i="${x.i}" data-task="${esc(x.task)}">
     <input type="checkbox">
     <span class="body">${esc(x.task)}
       <span class="meta">${who}${due}${age}<a href="#" class="open-rec" title="${esc(x.title)}">${esc(x.title)}</a></span></span></label>`;
