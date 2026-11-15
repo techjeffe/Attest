@@ -30,7 +30,7 @@ const acct = (npx(['wrangler', 'whoami'], { encoding: 'utf8' }).stdout || '').ma
 const accountId = await ask('Cloudflare account id', { def: [...new Set(acct)].length === 1 ? acct[0] : '' });
 console.log('(The API token needs Account permissions: Access Apps and Policies Edit, Access Organizations/Identity Providers/Groups Edit, and Access Service Tokens Edit.)');
 const token = await secret('Cloudflare API token');
-if (!accountId || !token) { console.error('Need both the account id and an API token (see the README, step 3).'); process.exit(1); }
+if (!accountId || !token) { console.error('Need both the account id and an API token (see docs/cloudflare-reference.md, step 3).'); process.exit(1); }
 
 let acc;
 try {

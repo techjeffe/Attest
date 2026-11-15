@@ -21,7 +21,7 @@ binding = "AUDIO"
 
 # Semantic search bindings (AI + a Vectorize index named attest-memory) are NOT listed here on
 # purpose: a binding to a missing index makes `wrangler deploy` fail. `npm run deploy` creates
-# the index and appends them to the merged config (see README, "Semantic search"). Without
+# the index and appends them to the merged config (see docs/cloudflare-reference.md, "Semantic search setup"). Without
 # them Ask uses keyword search.
 
 # Free-plan friendly: Cron Triggers cost nothing. Every 15 min the Worker pulls new

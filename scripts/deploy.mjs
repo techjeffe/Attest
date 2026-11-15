@@ -47,7 +47,7 @@ async function wizard() {
   console.log('\nWhere should Attest run?');
   console.log('  1. Cloudflare + a hosted AI provider (OpenRouter or OpenAI). Reachable from anywhere. Recommended.');
   console.log(`  2. ${machineLabel().replace(/^t/, 'T')} only, with a local model server (oMLX on a Mac; LM Studio or Ollama on Windows/Linux). Nothing leaves your machine; no API fees.`);
-  console.log('     (No Cloudflare account needed. Speaker detection and search work, with some trade-offs: see the README.)');
+  console.log('     (No Cloudflare account needed. Speaker detection and search work, with some trade-offs: see docs/run-locally.md.)');
   if ((await ask('Choose 1 or 2', { def: '1' })).trim() === '2') {
     const { setupLocal } = await import('./local-setup.mjs');
     process.exit((await setupLocal()) ? 0 : 1);
@@ -55,7 +55,7 @@ async function wizard() {
   console.log(`
 Attest setup. Answers are used once and nothing here is committed to git.
 Before you start, in the Cloudflare dashboard: enable R2 (R2 Object Storage) and, for
-the automatic login setup, complete Zero Trust onboarding (Free plan). See the README.
+the automatic login setup, complete Zero Trust onboarding (Free plan). See docs/cloudflare-reference.md.
 `);
   let host = '';
   while (!hostOk(host)) host = (await ask('Hostname for Attest (a subdomain of a domain on your Cloudflare, e.g. attest.example.com)', { def: existingHost() })).toLowerCase();
@@ -102,7 +102,7 @@ the automatic login setup, complete Zero Trust onboarding (Free plan). See the R
   secrets.SOURCES = picked.join(',') || 'none';
 
   let access = null;
-  if (await confirm('Create the Cloudflare Access login automatically? (needs an API token, see README)')) {
+  if (await confirm('Create the Cloudflare Access login automatically? (needs an API token, see docs/cloudflare-reference.md)')) {
     const acct = (npx(['wrangler', 'whoami'], { encoding: 'utf8' }).stdout || '').match(/\b[0-9a-f]{32}\b/g) || [];
     const accountId = await ask('Cloudflare account id', { def: [...new Set(acct)].length === 1 ? acct[0] : '' });
     const token = await secret('Cloudflare API token');
@@ -175,7 +175,7 @@ async function main() {
       process.exit(1);
     }
   } else {
-    console.log(`\nDeployed at https://${setup.host}. Still to do: put Cloudflare Access in front of it (README step 6); until then it answers 401.`);
+    console.log(`\nDeployed at https://${setup.host}. Still to do: put Cloudflare Access in front of it (docs/cloudflare-reference.md, step 2); until then it answers 401.`);
   }
 }
 
