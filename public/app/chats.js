@@ -1,7 +1,7 @@
 // Ask threads (#2): thread list lives in lists.js, this is the conversation view.
 
 import { getArea } from './scope.js';
-import { confirmSheet } from './confirm.js';
+import { deleteWithUndo } from './undo.js';
 import { $, esc, md } from './dom.js';
 import { api } from './api.js';
 import { state } from './state.js';
@@ -75,9 +75,11 @@ function renderChat(chat, messages) {
   $('back-ask').onclick = (e) => { e.preventDefault(); showAsk(); };
   renderChatMessages(messages);
   $('del-chat').onclick = async () => {
-    if (!(await confirmSheet({ title: 'Delete this chat?', confirmLabel: 'Delete', destructive: true }))) return;
-    await fetch('/api/chats/' + chat.id, { method: 'DELETE' });
-    showAsk();
+    deleteWithUndo({
+      key: 'chat-' + chat.id, url: '/api/chats/' + chat.id, label: 'Chat deleted',
+      hide: () => showAsk(),
+      restore: () => refreshChats(),
+    });
   };
   $('chat-send').onclick = () => sendChatMessage(chat.id);
   $('chat-q').onkeydown = (e) => { if (e.key === 'Enter') sendChatMessage(chat.id); };

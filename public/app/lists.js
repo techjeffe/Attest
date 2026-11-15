@@ -4,6 +4,7 @@
 import { $, esc } from './dom.js';
 import { api } from './api.js';
 import { state } from './state.js';
+import { isPendingDelete } from './undo.js';
 import { areaLabel, getArea, areaQuery } from './scope.js';
 import { groupByDate, fmtDuration, STATUS_LABEL, initials, avatarStyle } from './format.js';
 
@@ -28,7 +29,8 @@ export async function refresh() {
   const onRecording = Boolean(state.current);
   $('home')?.classList.toggle('active', !onRecording && state.screen === 'today');
   $('nav-ask')?.classList.toggle('active', !onRecording && state.screen === 'ask');
-  const { recordings } = await api('/recordings' + areaQuery());
+  const { recordings: all } = await api('/recordings' + areaQuery());
+  const recordings = all.filter((r) => !isPendingDelete(r.id));
   state.recordings = recordings; // newest first; the recording page uses it to find its neighbour
   $('count').textContent = recordings.length ? `(${recordings.length})` : '';
   $('list').innerHTML = groupByDate(recordings).map((g) =>
@@ -41,7 +43,7 @@ export async function refreshChats() {
   const box = $('chat-list');
   if (!box) return;
   const { chats } = await api('/chats');
-  box.innerHTML = chats.map((c) => `<div class="task chatrow" data-chat-id="${c.id}" style="cursor:pointer">
+  box.innerHTML = chats.filter((c) => !isPendingDelete('chat-' + c.id)).map((c) => `<div class="task chatrow" data-chat-id="${c.id}" style="cursor:pointer">
       <span class="body"><b>${esc(c.title)}</b>
         <span class="meta"><span>${c.message_count} message${c.message_count === 1 ? '' : 's'}</span><span>${new Date(c.created_at).toLocaleDateString()}</span></span></span></div>`).join('')
     || '<div class="muted" style="padding:12px 0">No chats yet. Ask a question above and it starts one.</div>';

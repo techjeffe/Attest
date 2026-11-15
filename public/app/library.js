@@ -9,7 +9,7 @@ import { refresh } from './lists.js';
 import { open, process } from './recordings.js';
 import { showToday } from './today.js';
 import { openMenu, closeMenu } from './menu.js';
-import { confirmSheet } from './confirm.js';
+import { deleteWithUndo } from './undo.js';
 import { haptic } from './haptic.js';
 import { AREAS } from './scope.js';
 
@@ -25,11 +25,11 @@ export async function retry(id) {
 
 export async function remove(id) {
   const r = find(id);
-  const ok = await confirmSheet({ title: 'Delete this recording?', message: `${r ? `“${r.title}” and its` : 'The recording and its'} audio are deleted. This cannot be undone.`, confirmLabel: 'Delete', destructive: true });
-  if (!ok) return false;
-  await fetch('/api/recordings/' + id, { method: 'DELETE' });
-  if (state.current === id) { state.current = null; showToday(); }
-  await refresh();
+  deleteWithUndo({
+    key: id, url: '/api/recordings/' + id, label: `Deleted ${r ? `“${r.title}”` : 'recording'}`,
+    hide: () => { if (state.current === id) { state.current = null; showToday(); } refresh(); },
+    restore: () => refresh(),
+  });
   haptic('success');
   return true;
 }

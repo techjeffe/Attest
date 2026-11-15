@@ -2,6 +2,7 @@
 
 import { $, esc, md } from './dom.js';
 import { confirmSheet } from './confirm.js';
+import { deleteWithUndo } from './undo.js';
 import { api } from './api.js';
 import { state } from './state.js';
 import { refresh, refreshChats } from './lists.js';
@@ -344,11 +345,11 @@ export function render(r) {
     } catch (e) { alert(e.message); }
   };
   $('del').onclick = async () => {
-    if (!(await confirmSheet({ title: 'Delete this recording?', message: 'The recording and its audio are deleted. This cannot be undone.', confirmLabel: 'Delete', destructive: true }))) return;
-    await fetch('/api/recordings/' + r.id, { method: 'DELETE' });
-    state.current = null;
-    $('main').innerHTML = '<div class="empty">Deleted.</div>';
-    refresh();
+    deleteWithUndo({
+      key: r.id, url: '/api/recordings/' + r.id, label: `Deleted “${r.title}”`,
+      hide: () => { state.current = null; $('main').innerHTML = '<div class="empty">Deleted.</div>'; refresh(); },
+      restore: () => { state.current = r.id; refresh(); open(r.id); },
+    });
   };
   $('main').querySelectorAll('.chip[data-label]').forEach((chip) => {
     chip.onclick = () => openNameMenu(r, chip);
