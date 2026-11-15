@@ -10,7 +10,7 @@ enum Keychain {
         guard !value.isEmpty else { return }
         var add = base
         add[kSecValueData as String] = Data(value.utf8)
-        add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock // readable by a background sync
+        add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly // readable by a background sync; never copied to another device
         SecItemAdd(add as CFDictionary, nil)
     }
     static func get(_ key: String) -> String {

@@ -22,6 +22,11 @@ final class WebLoader: ObservableObject {
         if webView?.url == nil { webView?.load(URLRequest(url: reloadURL)) } else { webView?.reload() }
     }
     var reloadURL: URL = URL(string: "about:blank")!
+
+    /// Tells the page what the app did with the lock switch, so Settings shows the truth.
+    func reportLock(_ on: Bool) {
+        webView?.evaluateJavaScript("window.attestNative && (window.attestNative.lock = \(on)); var b = document.getElementById('srv-lock'); if (b) b.checked = \(on);")
+    }
 }
 
 /// Attest itself: the same web app, with its phone layout and bottom tab bar. Sign-in (Cloudflare Access)
@@ -33,19 +38,24 @@ struct WebView: PlatformViewRepresentable {
     var onOpenPendant: () -> Void = {}
     /// Settings > Change server asks the app to show the Connect screen.
     var onChangeServer: () -> Void = {}
+    /// Settings > Require Face ID asks the app to turn the lock on or off.
+    var onSetLock: (Bool) -> Void = { _ in }
+    var lockEnabled = false
 
-    func makeCoordinator() -> Coordinator { Coordinator(loader, onOpenPendant, onChangeServer) }
+    func makeCoordinator() -> Coordinator { Coordinator(loader, onOpenPendant, onChangeServer, onSetLock) }
 
     final class Coordinator: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessageHandler {
         let onOpenPendant: () -> Void
         let onChangeServer: () -> Void
+        let onSetLock: (Bool) -> Void
         let loader: WebLoader
-        init(_ l: WebLoader, _ f: @escaping () -> Void, _ g: @escaping () -> Void) { loader = l; onOpenPendant = f; onChangeServer = g }
+        init(_ l: WebLoader, _ f: @escaping () -> Void, _ g: @escaping () -> Void, _ h: @escaping (Bool) -> Void) { loader = l; onOpenPendant = f; onChangeServer = g; onSetLock = h }
 
         func userContentController(_ c: WKUserContentController, didReceive m: WKScriptMessage) {
             let body = m.body as? [String: Any]
             switch body?["action"] as? String {
             case "pendant": DispatchQueue.main.async { self.onOpenPendant() }
+            case "lock": if let on = body?["on"] as? Bool { DispatchQueue.main.async { self.onSetLock(on) } }
             case "server": DispatchQueue.main.async { self.onChangeServer() }
             case "haptic": Haptics.play(body?["style"] as? String)
             default: break
@@ -98,6 +108,8 @@ struct WebView: PlatformViewRepresentable {
         #endif
         cfg.mediaTypesRequiringUserActionForPlayback = []
         cfg.userContentController.add(c, name: "attest")
+        // What the page needs to know about the app it is running in (Settings shows the lock switch from this).
+        cfg.userContentController.addUserScript(WKUserScript(source: "window.attestNative = { lock: \(lockEnabled) };", injectionTime: .atDocumentStart, forMainFrameOnly: true))
         let v = WKWebView(frame: .zero, configuration: cfg)
         #if os(iOS)
         v.isOpaque = false

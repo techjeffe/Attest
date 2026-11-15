@@ -6,6 +6,8 @@ struct RootView: View {
     @State private var showPendant = false
     @State private var showSetup = false
     @StateObject private var loader = WebLoader()
+    @ObservedObject private var lock = AppLock.shared
+    @Environment(\.scenePhase) private var phase
     @State private var incoming: IncomingLink?
 
     var body: some View {
@@ -14,7 +16,8 @@ struct RootView: View {
                 ZStack(alignment: .bottomTrailing) {
                     // Behind the page, so the status-bar strip is the app's own dark, not white.
                     Color(red: 9 / 255, green: 9 / 255, blue: 11 / 255).ignoresSafeArea()
-                    WebView(url: url, loader: loader, onOpenPendant: { showPendant = true }, onChangeServer: { showSetup = true }).ignoresSafeArea(edges: .bottom)
+                    WebView(url: url, loader: loader, onOpenPendant: { showPendant = true }, onChangeServer: { showSetup = true },
+                            onSetLock: { on in Task { _ = await lock.setEnabled(on); loader.reportLock(lock.enabled) } }, lockEnabled: lock.enabled).ignoresSafeArea(edges: .bottom)
                     LoadOverlay(loader: loader, host: url.host ?? "", change: { showSetup = true })
                     // Only when there is something to say (recordings waiting, syncing, a problem), clear of the
                     // header and the tab bar. Otherwise the pendant lives in Settings > Open pendant sync.
@@ -30,6 +33,12 @@ struct RootView: View {
             }
         }
         .preferredColorScheme(.dark)
+        // Locked, or not the active app (so the app switcher shows nothing): cover everything.
+        .overlay { if lock.enabled && (lock.locked || phase != .active) { LockCover(lock: lock) } }
+        .onChange(of: phase) { p in
+            if p == .active { lock.didReturn(); Task { await lock.unlock() } } else { lock.didLeave() }
+        }
+        .task { await lock.unlock() }
         .sheet(isPresented: $showSetup) { SetupView(pendant: pendant) { showSetup = false }.preferredColorScheme(.dark) }
         .task { pendant.refreshQueue() }
         // attest://connect?... from setup. Anyone can send you a link, so the address is confirmed first.

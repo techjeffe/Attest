@@ -125,11 +125,16 @@ function serverRowHtml() {
   return `<div class="set-server"><span class="dot" aria-hidden="true"></span>
     <div class="who"><b>${esc(location.host)}</b><div class="muted">Connected</div></div>
     <button type="button" class="small" id="srv-pendant">Pendant sync</button>
-    <button type="button" class="small" id="srv-change">Change server</button></div>`;
+    <button type="button" class="small" id="srv-change">Change server</button></div>
+    ${window.attestNative ? `<label class="opt set-lock"><input type="checkbox" id="srv-lock"${window.attestNative.lock ? ' checked' : ''}>
+      <span>Lock Attest <span class="muted">(ask for Face ID, Touch ID or your passcode when it opens)</span></span></label>` : ''}`;
 }
 function wireServerRow() {
   $('srv-pendant')?.addEventListener('click', () => nativeBridge()?.postMessage({ action: 'pendant' }));
   $('srv-change')?.addEventListener('click', () => nativeBridge()?.postMessage({ action: 'server' }));
+  // The app answers by setting window.attestNative.lock and this box to what actually happened (it refuses when
+  // the device has no passcode, or the person cancels the check).
+  $('srv-lock')?.addEventListener('change', (e) => nativeBridge()?.postMessage({ action: 'lock', on: e.target.checked }));
 }
 
 // A settings group that folds: the page is long, and most of it is set once. Closed groups stay in the DOM, so
