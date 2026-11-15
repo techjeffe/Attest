@@ -17,3 +17,8 @@ apple/Attest.xcodeproj/
 apple/App/iOS/Info.plist
 apple/App/macOS/Info.plist
 apple/App/macOS/Attest.entitlements
+
+# Xcode per-user state (it carries your macOS username and local paths): never commit it
+xcuserdata/
+*.xcuserstate
+signing.local.env
