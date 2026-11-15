@@ -335,7 +335,7 @@ dialog textarea, dialog input:not([type=checkbox]), dialog select { width:100% }
   body { padding-bottom:calc(64px + var(--safe-b)) }
   /* The tabs replace the top buttons and the sidebar's own nav, and decide which pane shows. */
   .aside-nav, #export-all, #export-zip, header #settings { display:none }
-  body[data-tab="recordings"] main, body:not([data-tab="recordings"]) aside { display:none }
+  body[data-tab="recordings"] main, body[data-tab="record"] main, body:not([data-tab="recordings"]):not([data-tab="record"]) aside { display:none }
 }
 /* Reduce Motion (iOS Settings > Accessibility, or the OS equivalent): no animation or smooth scrolling anywhere. */
 @media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important } }
@@ -465,3 +465,20 @@ button.danger { background:var(--danger, #ef4444); border-color:transparent; col
 .popover .opt.danger-opt { color:#f87171 }
 .popover a.opt { display:flex; align-items:center; text-decoration:none; color:inherit }
 @media (max-width:767px) { .rerr button { min-height:36px } }
+
+/* ---------- Record pane on a phone: one big button, a big timer, the live transcript ---------- */
+@media (max-width:767px) {
+  body[data-tab="recordings"] .rec-block, body[data-tab="recordings"] details.opts, body[data-tab="recordings"] #transcriber-note { display:none }
+  body[data-tab="record"] aside { border:0 }
+  body[data-tab="record"] aside .group-title, body[data-tab="record"] #list, body[data-tab="record"] aside .aside-nav { display:none }
+  body[data-tab="record"] .rec-block { align-items:center; gap:14px; margin-top:6vh }
+  body[data-tab="record"] button.rec { width:148px; height:148px; border-radius:50%; font-size:17px; padding:0 }
+  body[data-tab="record"] button.rec.on::before { border-radius:50% }
+  body[data-tab="record"] #timer { font-size:44px; font-weight:600; font-variant-numeric:tabular-nums; color:var(--text-primary) }
+  body[data-tab="record"] #live { width:100%; max-height:32vh; overflow-y:auto; text-align:left; font-size:14px }
+  body[data-tab="record"] #mic-block { display:contents }
+  body[data-tab="record"] button.rec { order:0 } body[data-tab="record"] #timer { order:1 } body[data-tab="record"] #live { order:2 }
+  body[data-tab="record"] #mic-block .rec-sub { order:3 } body[data-tab="record"] #import-row { order:4 } body[data-tab="record"] #pocket-status, body[data-tab="record"] #source-hint { order:5 }
+  body[data-tab="record"] .rec-sub, body[data-tab="record"] #import-row { width:100% }
+  body[data-tab="record"] .rec-sub > *, body[data-tab="record"] #import-row > * { min-height:44px }
+}

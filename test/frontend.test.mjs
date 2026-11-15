@@ -808,7 +808,7 @@ test('the bottom tab bar wires Home, Ask, Record, Recordings and Settings, and s
   assert.equal(document.body.dataset.tab, 'recordings');
   tap('record');
   assert.equal(recClicks, 1, 'the centre button starts recording');
-  assert.equal(document.body.dataset.tab, 'recordings', 'and shows the pane with the timer and live text');
+  assert.equal(document.body.dataset.tab, 'record', 'and shows its own pane, with the big button, timer and live text');
   tap('settings');
   assert.equal(settingsClicks, 1, 'Settings opens the existing dialog');
   tap('ask');
