@@ -99,11 +99,12 @@ class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker
 
     private fun giveUp(file: File, item: UploadItem, why: String): Result {
         file.delete()
-        notifyFailure(item.title, why)
+        notifyFailure(item, why)
         return Result.failure()
     }
 
-    private fun notifyFailure(title: String, why: String) {
+    private fun notifyFailure(item: UploadItem, why: String) {
+        val title = item.title
         val ctx = applicationContext
         // POST_NOTIFICATIONS exists from Android 13; below that it always reads as denied.
         if (android.os.Build.VERSION.SDK_INT >= 33 &&
@@ -120,6 +121,6 @@ class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker
             .setContentIntent(open)
             .setAutoCancel(true)
             .build()
-        nm.notify(title.hashCode(), n)
+        nm.notify(item.workId.hashCode(), n)
     }
 }
