@@ -1,6 +1,7 @@
 // Ask threads (#2): thread list lives in lists.js, this is the conversation view.
 
 import { getArea } from './scope.js';
+import { confirmSheet } from './confirm.js';
 import { $, esc, md } from './dom.js';
 import { api } from './api.js';
 import { state } from './state.js';
@@ -74,7 +75,7 @@ function renderChat(chat, messages) {
   $('back-ask').onclick = (e) => { e.preventDefault(); showAsk(); };
   renderChatMessages(messages);
   $('del-chat').onclick = async () => {
-    if (!confirm('Delete this chat?')) return;
+    if (!(await confirmSheet({ title: 'Delete this chat?', confirmLabel: 'Delete', destructive: true }))) return;
     await fetch('/api/chats/' + chat.id, { method: 'DELETE' });
     showAsk();
   };

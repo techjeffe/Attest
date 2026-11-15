@@ -1,6 +1,7 @@
 // The Today screen (home): auto briefs, open action items, and the prefilled prompt box.
 
 import { getArea, areaQuery } from './scope.js';
+import { confirmSheet } from './confirm.js';
 import { BUCKETS, groupReminders } from './reminders.js';
 import { $, esc, md } from './dom.js';
 import { api } from './api.js';
@@ -395,7 +396,7 @@ async function loadMemory(mine) {
     if (e.target.closest('.open-rec')) { e.preventDefault(); return open(row.dataset.rec); }
     if (e.target.closest('.fact-del')) {
       e.preventDefault();
-      if (!confirm('Forget this fact? It stays in the recording.')) return;
+      if (!(await confirmSheet({ title: 'Forget this fact?', message: 'It stays in the recording.', confirmLabel: 'Forget', destructive: true }))) return;
       await api('/memory/' + row.dataset.id, { method: 'DELETE' }).catch((err) => alert(err.message));
       return loadMemory(mine);
     }
@@ -470,7 +471,7 @@ export function personRow(p, others) {
 }
 
 async function doMerge(fromId, fromName, intoId, intoName, mine) {
-  if (!confirm(`Merge “${fromName}” into “${intoName}”?\n\nEvery recording, saved voice sample and remembered fact for “${fromName}” becomes “${intoName}”, and “${fromName}” is kept as an alias. This cannot be undone.`)) return;
+  if (!(await confirmSheet({ title: `Merge “${fromName}” into “${intoName}”?`, message: `Every recording, saved voice sample and remembered fact for “${fromName}” becomes “${intoName}”, and “${fromName}” is kept as an alias. This cannot be undone.`, confirmLabel: 'Merge', destructive: true }))) return;
   try {
     const r = await post('/people/merge', { from_id: fromId, into_id: intoId });
     if ($('people-list') && mine === token) {

@@ -419,3 +419,13 @@ dialog[open] { animation:pop-in .16s ease-out }
 .bucket-h { font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); margin:0 0 4px; font-weight:600 }
 .bucket-overdue .bucket-h { color:var(--bad) } .bucket-today .bucket-h { color:#d97706 }
 .today-main .omnibar { margin-top:22px }
+
+/* ---------- confirmation sheet (app/confirm.js) ---------- */
+.confirm-sheet { width:min(420px, 92vw) }
+.cs-body { padding:20px 20px 16px }
+.cs-body h2 { margin:0 0 6px; font-size:17px; line-height:1.3 }
+.cs-body p { margin:0 0 16px; color:var(--text-secondary); font-size:14px; line-height:1.5; white-space:pre-line }
+.cs-actions { display:flex; flex-direction:column; gap:8px }
+.cs-actions button { min-height:44px; font-size:16px }
+button.danger { background:var(--danger, #ef4444); border-color:transparent; color:#fff; font-weight:600 }
+@media (min-width:768px) { .cs-actions { flex-direction:row-reverse } .cs-actions button { flex:1 } }
